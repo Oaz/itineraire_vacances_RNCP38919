@@ -32,7 +32,7 @@ Développer un outil de recommandation d'itinéraires de vacances, basé sur les
   - Il faut ensuite créer une "application" pour recevoir une clé afin de consommer l'API via une URL donnée
     - Par exemple : https://diffuseur.datatourisme.fr/webservice/a92d9021ef870f512dd7c4146b94f0a2/{app_key}  
 
-  - le fichier ZIP contient 5 fichiers:
+  - le fichier ZIP contient 3 fichiers:
     - Un fichier d'index, listant les points d'intérêt contenus dans l'archive, avec leur dernière date de modication et le fichier json correspondant.
     - Un dossier objects contenant, au sein d'une hiérarchie itérative de dossiers, **un fichier pour chaque point d'intérêt**
     - Un fichier de contexte, permettant de transformer chaque fichier en JSON-LD (si besoin)
