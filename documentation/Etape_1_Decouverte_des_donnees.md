@@ -277,8 +277,22 @@ En téléchargeant l'ensemble des données pour une zone extraites dans un forma
 
 Pour les gros volumes de données, le format binaire sur une grande zone est préférable: Il existe des bibliothèques Python pour lire ces fichiers.
 
-## D - Remarques et Evolutions
+## D - Remarques et Evolutions  
+
+Evolutions possibles de l'application :
+- Possibilités de filtrage selon plusieurs critères, par exemple :
+  - Filtrage par type de POI
+  - Filtrage par rating
+  - Distance maximum à parcourir
+  - Temps maximum du circuit de visite
+  - ...
+
+Dans le cadre de ce projet, il y a quelques contraintes que nous pouvons rencontrer :
+- En terme d'acquisition et d'extraction de données :
+  - Risque de bannissement d'IP suite à un scrapping trop intensif (Exemple : scrapping du frontend de Tripadvisor)
+  - Limitation de la fréquence du refresh des données sur Datatourisme
+  - Cout d'utilisation de certaines API:  
+    - Google Places 32$ pour 1000 requètes (sachant qu'une recherche peut utiliser **plusieurs** appels avec la pagination.)
 
 
 
-- Notes sur les évolutions possible de l'outils (ajout de filtres en plus du rating....)et les contraintes sur l'utilisation de certaines API (coût sur GCP, risque de bannissement d'IP pour le scraping..)  
