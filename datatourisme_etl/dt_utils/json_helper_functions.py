@@ -10,8 +10,8 @@ def get_poi_identifier(filename: str) -> str | None:
     with open(filename, "r", encoding="utf-8") as file:
         content = json.load(file)
     try:
-        poi_id = content["dc:identifier"]
-        return poi_id
+        _poi_id = content["dc:identifier"]
+        return _poi_id
     except KeyError as e:
         print(f"Erreur de clé: {e}. Vérifier la structure et recommencer.")
         return None
@@ -25,8 +25,8 @@ def get_poi_name(filename: str) -> str | None:
     with open(filename, "r", encoding="utf-8") as file:
         content = json.load(file)
     try:
-        poi_name = content["rdfs:label"]["fr"][0]
-        return poi_name
+        _poi_name = content["rdfs:label"]["fr"][0]
+        return _poi_name
     except KeyError as e:
         print(f"Erreur de clé: {e}. Vérifier la structure et recommencer.")
         return None
@@ -40,8 +40,8 @@ def get_poi_creation_date(filename: str) -> str | None:
     with open(filename, "r", encoding="utf-8") as file:
         content = json.load(file)
     try:
-        poi_created_date = content["creationDate"]
-        return poi_created_date
+        _poi_created_date = content["creationDate"]
+        return _poi_created_date
     except KeyError as e:
         print(f"Erreur de clé: {e}. Vérifier la structure et recommencer.")
         return None
@@ -52,7 +52,7 @@ def find_last_update_by_label(label: str) -> str | None:
     :param label: str
     :return: str | None si le label n'est pas trouvé
     """
-    with open("data/index.json", "r", encoding="utf-8") as file:
+    with open("../data/index.json", "r", encoding="utf-8") as file:
         data = json.load(file)
 
     for item in data:
@@ -69,8 +69,8 @@ def get_poi_category(filename: str) -> list | None:
     with open(filename, "r", encoding="utf-8") as file:
         content = json.load(file)
     try:
-        poi_category = content["@type"]
-        return poi_category
+        _poi_category = content["@type"]
+        return _poi_category
     except KeyError as e:
         print(f"Erreur de clé: {e}. Vérifier la structure et recommencer.")
         return None
@@ -98,13 +98,13 @@ def get_poi_region(filename: str) -> tuple[str, str] | tuple[None, None]:
     with open(filename, "r", encoding="utf-8") as file:
         content = json.load(file)
     try:
-        poi_region_id = content["isLocatedAt"][0]["schema:address"][0][
+        _poi_region_id = content["isLocatedAt"][0]["schema:address"][0][
             "hasAddressCity"
         ]["isPartOfDepartment"]["isPartOfRegion"]["@id"]
-        poi_region_name = content["isLocatedAt"][0]["schema:address"][0][
+        _poi_region_name = content["isLocatedAt"][0]["schema:address"][0][
             "hasAddressCity"
         ]["isPartOfDepartment"]["isPartOfRegion"]["rdfs:label"]["fr"][0]
-        return poi_region_id, poi_region_name
+        return _poi_region_id, _poi_region_name
     except KeyError as e:
         print(f"Erreur de clé: {e}. Vérifier la structure et recommencer.")
         return None, None
@@ -118,18 +118,14 @@ def get_poi_department(filename: str) -> tuple[str, str] | tuple[None, None]:
     with open(filename, "r", encoding="utf-8") as file:
         content = json.load(file)
     try:
-        poi_department_id = content["isLocatedAt"][0]["schema:address"][0][
-            "hasAddressCity"
-        ]["isPartOfDepartment"]["@id"]
-        poi_department = content["isLocatedAt"][0]["schema:address"][0][
-            "hasAddressCity"
-        ]["isPartOfDepartment"]["rdfs:label"]["fr"][0]
-        return poi_department_id, poi_department
+        _poi_department_id = content["isLocatedAt"][0]["schema:address"][0]["hasAddressCity"]["isPartOfDepartment"]["@id"]
+        _poi_department_name = content["isLocatedAt"][0]["schema:address"][0]["hasAddressCity"]["isPartOfDepartment"]["rdfs:label"]["fr"][0]
+        return _poi_department_id, _poi_department_name
     except KeyError as e:
         print(f"Erreur de clé: {e}. Vérifier la structure et recommencer.")
         return None, None
 
-def get_poi_city(filename: str) -> tuple[str, str] | tuple[None, None]:
+def get_poi_city(filename: str) -> tuple[str, str, str] | tuple[None, None]:
     """
     Récupère la ville du point d'intérêt dans le fichier JSON
     :param filename: str
@@ -138,13 +134,10 @@ def get_poi_city(filename: str) -> tuple[str, str] | tuple[None, None]:
     with open(filename, "r", encoding="utf-8") as file:
         content = json.load(file)
     try:
-        poi_city_id = content["isLocatedAt"][0]["schema:address"][0]["hasAddressCity"][
-            "@id"
-        ]
-        poi_city = content["isLocatedAt"][0]["schema:address"][0]["hasAddressCity"][
-            "rdfs:label"
-        ]["fr"][0]
-        return poi_city_id, poi_city
+        _poi_city_id = content["isLocatedAt"][0]["schema:address"][0]["hasAddressCity"]["@id"]
+        _poi_city = content["isLocatedAt"][0]["schema:address"][0]["hasAddressCity"]["rdfs:label"]["fr"][0]
+        _poi_postcode = content["isLocatedAt"][0]["schema:address"][0]["schema:postalCode"]
+        return _poi_city_id, _poi_city, _poi_postcode
     except KeyError as e:
         print(f"Erreur de clé: {e}. Vérifier la structure et recommencer.")
         return None, None
@@ -158,9 +151,9 @@ def get_poi_coordinates(filename: str) -> tuple[float, float] | tuple[None, None
     with open(filename, "r", encoding="utf-8") as file:
         content = json.load(file)
     try:
-        poi_lat = float(content["isLocatedAt"][0]["schema:geo"]["schema:latitude"])
-        poi_long = float(content["isLocatedAt"][0]["schema:geo"]["schema:longitude"])
-        return poi_lat, poi_long
+        _poi_lat = float(content["isLocatedAt"][0]["schema:geo"]["schema:latitude"])
+        _poi_long = float(content["isLocatedAt"][0]["schema:geo"]["schema:longitude"])
+        return _poi_lat, _poi_long
     except KeyError as e:
         print(f"Erreur de clé: {e}. Vérifier la structure et recommencer.")
         return None, None
@@ -169,7 +162,7 @@ if __name__ == "__main__":
     try:
         # Essai sur un fichier JSON
         # Pensez à modifier le chemin du fichier si nécessaire
-        file_path = "data/objects/0/0a/49-0a1a7c7e-b2b1-3bb8-b4a2-0be8c160333a.json"
+        file_path = "../data/objects/0/0a/49-0a1a7c7e-b2b1-3bb8-b4a2-0be8c160333a.json"
 
         poi_identifier = get_poi_identifier(file_path)
         poi_name = get_poi_name(file_path)
@@ -178,7 +171,7 @@ if __name__ == "__main__":
         poi_category_cleaned = category_cleanup(poi_category)
         poi_region_id, poi_region_name = get_poi_region(file_path)
         poi_department_id, poi_department_name = get_poi_department(file_path)
-        poi_city_id, poi_city_name = get_poi_city(file_path)
+        poi_city_id, poi_city_name, poi_post_code = get_poi_city(file_path)
         poi_latitude, poi_longitude = get_poi_coordinates(file_path)
 
         print(f"Identifiant du point d'intérêt: {poi_identifier}")
@@ -186,7 +179,7 @@ if __name__ == "__main__":
         print(f"Catégories *cleaned* du point d'intérêt: {poi_category_cleaned}")
         print(f"Région du point d'intérêt: {poi_region_id} - {poi_region_name}")
         print(f"Département du point d'intérêt: {poi_department_id} - {poi_department_name}")
-        print(f"Ville du point d'intérêt: {poi_city_id} - {poi_city_name}")
+        print(f"Ville du point d'intérêt: {poi_city_id} - {poi_city_name} - {poi_post_code}")
         print(f"Coordonnées du point d'intérêt: {poi_latitude}, {poi_longitude}")
 
         # Récupération du last update pour un label donné
