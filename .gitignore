@@ -1,0 +1,18 @@
+.idea
+# Ignorer l'environnement virtuel et le cache
+.venv
+**/__pycache__
+
+# Ignorer les variables d'environnement
+**/.env
+
+# Ignorer tous les fichiers de données
+**/raw_archive
+**/*.zip
+**/data
+**/*.json
+**/*.jsonld
+**/*.csv
+
+# Ignorer les fichiers de base de données DuckDB
+**/*.db
