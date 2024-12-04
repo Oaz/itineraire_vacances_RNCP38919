@@ -16,3 +16,4 @@
 
 # Ignorer les fichiers de base de données DuckDB
 **/*.db
+**/*.db.wal
