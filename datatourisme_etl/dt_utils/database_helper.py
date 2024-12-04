@@ -1,6 +1,6 @@
 import fireducks.pandas as pd
 import json
-import json_helper_functions as helper
+import dt_utils.json_helper_functions as helper
 import dotenv
 import os
 from sqlalchemy import create_engine, inspect, Engine
@@ -14,7 +14,7 @@ def connect_to_db() -> Engine:
     Connexion à la BDD
     :return: engine : moteur de connexion à la BDD
     """
-    engine = create_engine(f"postgresql://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}")
+    engine = create_engine(f"postgresql://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}/{os.getenv('POSTGRES_DB')}")
     return engine
 
 
@@ -39,13 +39,14 @@ def save_dataframe_to_postgres(df: pd.DataFrame, table_name: str):
     """
     df.to_sql(table_name, db_engine, if_exists='replace', index=False)
 
-def parse_index_datatourisme() -> list:
+def parse_index_datatourisme(index_path:str = "../data/index.json") -> list:
     """
     Parse le fichier index.json pour récupérer les URL des fichiers JSON.
 
+    :param index_path:str - Le chemin du fichier d'index (default: "../data/index.json")
     :return: list - La liste des URL des fichiers JSON
     """
-    with open("../data/index.json", "r", encoding="utf-8") as file:
+    with open(index_path, "r", encoding="utf-8") as file:
         data = json.load(file)
 
     urls = []
