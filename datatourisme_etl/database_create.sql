@@ -16,7 +16,6 @@ CREATE TABLE Departement (
 CREATE TABLE City (
     dt_city_id VARCHAR(255) PRIMARY KEY,
     dt_departement_id VARCHAR(255),
-    postal_code VARCHAR(20),
     name VARCHAR(255) NOT NULL,
     FOREIGN KEY (dt_departement_id) REFERENCES Departement(dt_departement_id)
 );
@@ -31,6 +30,7 @@ CREATE TABLE Point_Of_Interest (
     dt_updated_at TIMESTAMP,
     latitude FLOAT,
     longitude FLOAT,
+    postal_code VARCHAR(20),
     dt_city_id VARCHAR(255),
     FOREIGN KEY (dt_city_id) REFERENCES City(dt_city_id)
 );
