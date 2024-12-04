@@ -1,0 +1,97 @@
+import os
+
+import fireducks.pandas as pd
+import json
+import json_helper_functions as helper
+import dotenv
+import os
+from sqlalchemy import create_engine, inspect
+
+# Chargement des variables d'environnement
+dotenv.load_dotenv()
+# Moteur de connexion à la BDD
+db_engine = create_engine(f"postgresql://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}")
+
+def show_tables(engine: create_engine) -> list:
+    """
+    Permet d'interroger la BDD pour obtenir la liste des tables à fin de tests
+    :param engine:
+    :return: tables : liste des tables présentes dans la BDD
+    """
+    db_inspection = inspect(engine)
+    tables = db_inspection.get_table_names()
+    return tables
+
+def save_dataframe_to_postgres(df: pd.DataFrame, table_name: str):
+    """
+    Sauvegarde un DataFrame pandas dans une table PostgreSQL.
+
+    ATTENTION : Le Dataframe doit être formaté avec le même nombre et noms de colonnes
+
+    :param df: pd.DataFrame - Le DataFrame à sauvegarder
+    :param table_name: str - Le nom de la table dans laquelle sauvegarder le DataFrame
+    """
+    df.to_sql(table_name, db_engine, if_exists='replace', index=False)
+
+def parse_index_datatourisme() -> list:
+    """
+    Parse le fichier index.json pour récupérer les URL des fichiers JSON.
+
+    :return: list - La liste des URL des fichiers JSON
+    """
+    with open("../data/index.json", "r", encoding="utf-8") as file:
+        data = json.load(file)
+
+    urls = []
+    for item in data:
+        urls.append("data/objects/"+item["file"])
+    return urls
+
+def collect_region_information_from_files(urls: list) -> pd.DataFrame:
+    """
+    Collecte les informations des points d'intérêt à partir des fichiers JSON.
+
+    :param urls: list - La liste des URL des fichiers JSON
+    :return: pd.DataFrame - Le DataFrame contenant les informations des points d'intérêt
+    """
+    data = []
+    for url in urls:
+        poi_region_id, poi_region_name = helper.get_poi_region(url)
+        data.append([poi_region_id, poi_region_name])
+    # On crée un dataframe pour stocker les résultats
+    region_df = pd.DataFrame(data, columns=["dt_region_id", "name"])
+    return region_df
+
+def collect_department_information_from_files(urls: list) -> pd.DataFrame:
+    """
+    Collecte les informations concernant les département des points d'intérêt à partir des fichiers JSON.
+
+    :param urls: list - La liste des URL des fichiers JSON
+    :return: pd.DataFrame - Le DataFrame contenant les informations des points d'intérêt
+    """
+    data = []
+    for url in urls:
+        poi_department_id, poi_department_name = helper.get_poi_department(url)
+        data.append([poi_department_id, poi_department_name])
+    # On crée un dataframe pour stocker les résultats
+    department_df = pd.DataFrame(data, columns=["dt_department_id", "name"])
+
+    return department_df
+
+def collect_city_information_from_files(urls: list) -> pd.DataFrame:
+    """
+    Collecte les informations des points d'intérêt à partir des fichiers JSON.
+
+    :param urls: list - La liste des URL des fichiers JSON
+    :return: pd.DataFrame - Le DataFrame contenant les informations des points d'intérêt
+    """
+    data = []
+    for url in urls:
+        poi_city_id, poi_city_name, poi_city_postcode = helper.get_poi_city(url)
+        data.append([poi_city_id, poi_city_postcode, poi_city_name])
+    # On crée un dataframe pour stocker les résultats
+    city_df = pd.DataFrame(data, columns=["dt_city_id", "postcode", "name"])
+    # Et on supprime les doublons
+    city_df = city_df.drop_duplicates()
+    return city_df
+
