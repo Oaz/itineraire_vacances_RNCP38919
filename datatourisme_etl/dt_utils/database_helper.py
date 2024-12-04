@@ -1,16 +1,22 @@
-import os
-
 import fireducks.pandas as pd
 import json
 import json_helper_functions as helper
 import dotenv
 import os
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, Engine
 
 # Chargement des variables d'environnement
 dotenv.load_dotenv()
-# Moteur de connexion à la BDD
-db_engine = create_engine(f"postgresql://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}")
+
+
+def connect_to_db() -> Engine:
+    """
+    Connexion à la BDD
+    :return: engine : moteur de connexion à la BDD
+    """
+    engine = create_engine(f"postgresql://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}")
+    return engine
+
 
 def show_tables(engine: create_engine) -> list:
     """
