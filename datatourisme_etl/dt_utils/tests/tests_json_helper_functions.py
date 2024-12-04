@@ -4,7 +4,7 @@ import dt_utils.json_helper_functions as jhf
 
 class TestsJsonHelperFunctions(unittest.TestCase):
   def setUp(self):
-    self.file_path = "./49-0a1a7c7e-b2b1-3bb8-b4a2-0be8c160333a.json"
+    self.file_path = "./dt_feed_example/data/objects/0/0a/49-0a1a7c7e-b2b1-3bb8-b4a2-0be8c160333a.json"
 
   def test_poi_identifier(self):
     self.assertEqual("FMAPDL049V50HL4Q", jhf.get_poi_identifier(self.file_path))
