@@ -1,5 +1,6 @@
 .idea
 # Ignorer l'environnement virtuel et le cache
+/venv
 .venv
 **/__pycache__
 

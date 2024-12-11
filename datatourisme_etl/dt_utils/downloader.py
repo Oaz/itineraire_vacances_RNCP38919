@@ -49,6 +49,34 @@ def extract_data():
     except zipfile.BadZipFile:
         return False
 
+def download_datatourisme_categories() -> bool:
+    """
+    Permet de télécharger le fichier ontology.TTL de datatourisme
+    """
+    # Répertoire de stockage temporaire du fichier ontology.TTL
+    download_path = "../temporary_categories"
+    os.makedirs(download_path, exist_ok=True)
+    file_path = os.path.join(download_path, "ontology.TTL")
+
+    # Téléchargement du fichier ontology.TTL depuis datatourisme
+    url = "https://www.datatourisme.fr/ontology/core/ontology.ttl"
+
+    if not check_file_exists("../temporary_categories", "ontology.TTL"):
+
+        try:
+            response = requests.get(url, stream=True)
+            response.raise_for_status()  # Renvoi une exception si le code de statut de la réponse HTTP n'est pas 200
+
+            # Sauvegarde du fichier ontology.TTL
+            with open(file_path, "wb") as file:
+                for chunk in response.iter_content(chunk_size=8192):
+                    file.write(chunk)
+
+            return True
+        except requests.exceptions.RequestException as e:
+            return False
+    else:
+        pass
 
 if __name__ == "__main__":
     # Pour tester le script en appel direct

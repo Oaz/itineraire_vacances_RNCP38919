@@ -37,8 +37,8 @@ CREATE TABLE Point_Of_Interest (
 
 -- Create the Category table
 CREATE TABLE Category (
-    dt_category_id INT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL
+    dt_category_id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE
 );
 
 -- Create the Category_Point_Of_Interest table

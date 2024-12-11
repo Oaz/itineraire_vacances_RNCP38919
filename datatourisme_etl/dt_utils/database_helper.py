@@ -28,7 +28,7 @@ def show_tables(engine: create_engine) -> list:
     tables = db_inspection.get_table_names()
     return tables
 
-def save_dataframe_to_postgres(df: pd.DataFrame, table_name: str):
+def save_dataframe_to_postgres(df: pd.DataFrame, table_name: str, engine: create_engine, if_exists: str='replace'):
     """
     Sauvegarde un DataFrame pandas dans une table PostgreSQL.
 
@@ -36,8 +36,10 @@ def save_dataframe_to_postgres(df: pd.DataFrame, table_name: str):
 
     :param df: pd.DataFrame - Le DataFrame à sauvegarder
     :param table_name: str - Le nom de la table dans laquelle sauvegarder le DataFrame
+    :param engine:
+    :param if_exists: str - L'action si la table existe {"fail", "replace", "append"}(default: "replace")
     """
-    df.to_sql(table_name, db_engine, if_exists='replace', index=False)
+    df.to_sql(table_name, engine, if_exists=if_exists, index=False)
 
 def parse_index_datatourisme(index_path:str = "../data/index.json") -> list:
     """
