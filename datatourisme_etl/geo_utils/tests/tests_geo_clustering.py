@@ -1,12 +1,16 @@
+import math
 import unittest
 import pandas as pd
-from geo_utils.geo_clustering import GeoClustering
+from geo_utils.geo_clustering import GeoClustering, compute_xy
 
 
 class TestsGeoClustering(unittest.TestCase):
   def setUp(self):
     pois = pd.read_csv("poi_lat_lon.csv", sep=',')
     self.clustering = GeoClustering(pois)
+
+  def test_wrong_lat_lon_do_not_fail(self):
+    self.assertEqual((math.nan, math.nan), compute_xy(1059.0, 199.0))
 
   def test_x_y_are_computed(self):
     self.assertEqual('x', self.clustering.pois.columns[4])
@@ -40,6 +44,14 @@ class TestsGeoClustering(unittest.TestCase):
     self.assertEqual(619, len(self.clustering.unclustered_pois))
     self.clustering.increase_clusters(5000)
     self.assertEqual(344, len(self.clustering.unclustered_pois))
+
+  def test_all_as_clusters(self):
+    self.clustering.create_clusters()
+    self.assertEqual(43, len(self.clustering.clusters))
+    self.assertEqual(619, len(self.clustering.unclustered_pois))
+    self.clustering.transform_unclustered_into_clusters()
+    self.assertEqual(662, len(self.clustering.clusters))
+    self.assertEqual(0, len(self.clustering.unclustered_pois))
 
 
 if __name__ == '__main__':

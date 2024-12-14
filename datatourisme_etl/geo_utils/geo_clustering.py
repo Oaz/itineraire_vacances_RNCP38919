@@ -3,6 +3,18 @@ import numpy as np
 import hdbscan
 from sklearn.metrics import pairwise_distances
 from pyproj import Transformer
+import math
+
+# EPSG:9794 est le code EPSG pour la projection "RGF93 v2b / Lambert-93" utilisée en France
+# cf https://fr.wikipedia.org/wiki/Projection_conique_conforme_de_Lambert#Lambert_93
+transformer = Transformer.from_crs("EPSG:4326", "EPSG:9794", always_xy=True)
+
+
+def compute_xy(lat: float, lon: float):
+  try:
+    return tuple(map(int, transformer.transform(lon, lat)))
+  except OverflowError:
+    return math.nan, math.nan
 
 
 class GeoClustering:
@@ -18,14 +30,13 @@ class GeoClustering:
     self.__clusters = pd.DataFrame()
 
   def __add_lambert_metric_coordinates(self, longitude_column: str, latitude_column: str):
-    # EPSG:9794 est le code EPSG pour la projection "RGF93 v2b / Lambert-93" utilisée en France
-    # cf https://fr.wikipedia.org/wiki/Projection_conique_conforme_de_Lambert#Lambert_93
-    transformer = Transformer.from_crs("EPSG:4326", "EPSG:9794", always_xy=True)
     self.lambert = self.pois.apply(
-      lambda poi: tuple(map(int, transformer.transform(poi[longitude_column], poi[latitude_column]))),
+      lambda poi: compute_xy(poi[latitude_column], poi[longitude_column]),
       axis=1, result_type='expand'
     )
     self.pois[['x', 'y']] = self.lambert
+    self.pois = self.pois.dropna()
+    self.lambert = self.lambert.dropna()
 
   def create_clusters(self, min_cluster_size: int = 15, min_samples: int = 1):
     """
@@ -82,8 +93,27 @@ class GeoClustering:
       distances = np.linalg.norm(cluster_members - centroid.values, axis=1)
       radius = distances.max()
       count = len(cluster_members)
-      return int(radius), count, (1000 ** 2) * count / (radius ** 2)
+      if radius == 0:
+        radius = 1
+        density = 0
+      else:
+        density = (1000 ** 2) * count / (radius ** 2)
+      return int(radius), count, density
 
     clusters_details = [compute_details(label, centroid) for label, centroid in self.__clusters.iterrows()]
-    self.__clusters['radius'], self.__clusters['count'], self.__clusters['density'] = list(zip(*clusters_details))
-    return self.__clusters
+    clusters = self.__clusters.copy(deep=False)
+    clusters['radius'], clusters['count'], clusters['density'] = list(zip(*clusters_details))
+    return clusters
+
+  def transform_unclustered_into_clusters(self):
+    """
+    Tous les POIs qui ne sont pas dans un cluster sont individuellement transformés en cluster à 1 élément
+    """
+    unclustered = self.unclustered_pois
+    if unclustered.empty:
+      return
+    new_cluster_labels = range(self.__clusters.index.max() + 1, self.__clusters.index.max() + 1 + len(unclustered))
+    self.pois.loc[unclustered.index, 'cluster'] = new_cluster_labels
+    new_clusters = unclustered[['x', 'y']].copy()
+    new_clusters.index = new_cluster_labels
+    self.__clusters = pd.concat([self.__clusters, new_clusters])
