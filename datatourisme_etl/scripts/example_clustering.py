@@ -4,6 +4,7 @@ import pandas as pd
 import dt_utils.json_helper_functions as jh
 import dt_utils.neo4j_helper as nh
 from geo_utils.geo_clustering import GeoClustering
+from geo_utils.geo_routing import GeoRouting
 
 #########################
 # Exemple de script ETL pour les clusters
@@ -63,7 +64,13 @@ clustering.transform_unclustered_into_clusters()
 df_clusters = clustering.clusters
 df_vicinities = clustering.pois
 
-# 4 - Chargement des pois et des clusters dans neo4j
+# 4 - Création des routes entre les clusters
+print('ROUTING')
+routing = GeoRouting(df_clusters)
+routing.increase(threshold_in_meters=15000)
+routes = routing.edges
+
+# 5 - Chargement des pois et des clusters dans neo4j
 print('NEO4J IMPORT')
 os.environ["NEO4J_URL"] = 'bolt://localhost:7687'
 os.environ["NEO4J_USER"] = 'neo4j'
@@ -73,6 +80,8 @@ with nh.connect_to_neo4j() as driver:
   nh.import_pois(driver, df_pois)
   print('  CLUSTERS')
   nh.import_clusters(driver, category, df_clusters, df_vicinities)
+  print('  ROUTES')
+  nh.import_routes(driver, routes)
 
 print('DONE')
 
