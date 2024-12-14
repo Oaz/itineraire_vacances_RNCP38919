@@ -1,3 +1,4 @@
+from typing import Tuple, Dict
 import os
 import re
 import neo4j as neo4j
@@ -74,3 +75,17 @@ def import_clusters(driver: neo4j.Driver, category: str, df_clusters: pd.DataFra
     """, vicinities=vicinities)
 
 
+def import_routes(driver: neo4j.Driver, routes: Dict[Tuple[int, int], int]):
+  """
+  Importe des routes entre les clusters
+  :param driver:
+  :param routes: dictionnaire des distances pour chaque route entre 2 clusters
+  :return:
+  """
+  with driver.session() as session:
+    session.run("""
+        UNWIND $routes AS r
+        MATCH (c1:Cluster {id: r.a}), (c2:Cluster {id: r.b})
+        CREATE (c1)-[:ROUTE {distance: r.distance}]->(c2)
+        CREATE (c2)-[:ROUTE {distance: r.distance}]->(c1)
+    """, routes=[{"a": a, "b": b, "distance": distance} for ((a, b), distance) in routes.items()])

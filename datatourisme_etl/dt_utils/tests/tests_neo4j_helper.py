@@ -32,13 +32,7 @@ class TestNeo4jIntegration(unittest.TestCase):
       self.assertEqual(record["message"], "Hello, World")
 
   def test_import_pois_from_dataframe(self):
-    df = pd.DataFrame({
-      'id': ['ABC', 'DEF', 'GHI'],
-      'name': ['Lorem ipsum', 'dolor sit amet', 'doctus eripuit probatus'],
-      'x': [1000, 2000, 3000],
-      'y': [666, 777, 888],
-    })
-    nh.import_pois(self.driver, df)
+    self.util_import_pois()
     with self.driver.session() as session:
       self.assertEqual(
         {'id': 'ABC', 'name': 'Lorem ipsum', 'x': 1000, 'y': 666},
@@ -50,12 +44,7 @@ class TestNeo4jIntegration(unittest.TestCase):
       )
 
   def test_update_pois_from_dataframe(self):
-    nh.import_pois(self.driver, pd.DataFrame({
-      'id': ['ABC', 'DEF', 'GHI'],
-      'name': ['Lorem ipsum', 'dolor sit amet', 'doctus eripuit probatus'],
-      'x': [1000, 2000, 3000],
-      'y': [666, 777, 888],
-    }))
+    self.util_import_pois()
     nh.import_pois(self.driver, pd.DataFrame({
       'id': ['DEF', 'GHI'],
       'name': ['Hello', 'World'],
@@ -77,25 +66,8 @@ class TestNeo4jIntegration(unittest.TestCase):
       )
 
   def test_import_clusters_from_dataframe(self):
-    nh.import_pois(self.driver, pd.DataFrame({
-      'id': ['ABC', 'DEF', 'GHI'],
-      'name': ['Lorem ipsum', 'dolor sit amet', 'doctus eripuit probatus'],
-      'x': [1000, 2000, 3000],
-      'y': [666, 777, 888],
-    }))
-    df_clusters = pd.DataFrame(index=[0, 1], data={
-      'x': [1000, 2000],
-      'y': [666, 777],
-      'radius': [5666, 9777],
-      'count': [6, 17],
-      'density': [2, 5],
-    })
-
-    df_pois = pd.DataFrame({
-      'id': ['ABC', 'DEF', 'GHI'],
-      'cluster': [1, 0, 1],
-    })
-    nh.import_clusters(self.driver, "Culture", df_clusters, df_pois)
+    self.util_import_pois()
+    self.util_import_clusters()
     with self.driver.session() as session:
       self.assertEqual([
         {
@@ -116,6 +88,43 @@ class TestNeo4jIntegration(unittest.TestCase):
         record.data()['p'] for record
         in session.run("MATCH (c:Cluster)-[v:VICINITY]-(p:POI) WHERE c.id=1 RETURN p ORDER BY p.id").fetch(2)
       ])
+
+  def test_import_routes(self):
+    self.util_import_pois()
+    self.util_import_clusters()
+    nh.import_routes(
+      self.driver, {
+        (0, 1): 954
+      }
+    )
+    with self.driver.session() as session:
+      self.assertEqual([{'c.id': 0, 'r.distance': 954}, {'c.id': 1, 'r.distance': 954}], [
+        record.data() for record
+        in session.run("MATCH (c:Cluster)-[r:ROUTE]->(:Cluster) RETURN c.id, r.distance ORDER BY c.id").fetch(5)
+      ])
+
+  def util_import_pois(self):
+    nh.import_pois(self.driver, pd.DataFrame({
+      'id': ['ABC', 'DEF', 'GHI'],
+      'name': ['Lorem ipsum', 'dolor sit amet', 'doctus eripuit probatus'],
+      'x': [1000, 2000, 3000],
+      'y': [666, 777, 888],
+    }))
+
+  def util_import_clusters(self):
+    nh.import_clusters(
+      self.driver, "Culture",
+      pd.DataFrame(index=[0, 1], data={
+        'x': [1000, 2000],
+        'y': [666, 777],
+        'radius': [5666, 9777],
+        'count': [6, 17],
+        'density': [2, 5],
+      }), pd.DataFrame({
+        'id': ['ABC', 'DEF', 'GHI'],
+        'cluster': [1, 0, 1],
+      })
+    )
 
 
 if __name__ == "__main__":
