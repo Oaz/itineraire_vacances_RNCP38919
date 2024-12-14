@@ -30,3 +30,4 @@ testcontainers~=4.8.2
 hdbscan~=0.8.40
 scikit-learn~=1.5.2
 pyproj~=3.7.0
+neo4j~=5.27.0
