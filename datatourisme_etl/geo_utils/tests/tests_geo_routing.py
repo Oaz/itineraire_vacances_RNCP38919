@@ -27,8 +27,8 @@ class TestsGeoRouting(unittest.TestCase):
 
   def test_routes_are_increased(self):
     self.assertEqual(42, len(self.routing.edges))
-    self.routing.increase(12000)
-    self.assertEqual(58, len(self.routing.edges))
+    self.routing.increase(50000, 3)
+    self.assertEqual(47, len(self.routing.edges))
     self.test_all_nodes_are_connected()
     self.test_all_routes_have_distances()
 
