@@ -44,7 +44,7 @@ def create_pois_dataframe():
   return pd.DataFrame(data)
 
 
-cache_file = 'pois.csv'
+cache_file = f'{category}.csv'
 if os.path.exists(cache_file):
   df_pois = pd.read_csv(cache_file)
 else:
@@ -67,7 +67,7 @@ df_vicinities = clustering.pois
 # 4 - Création des routes entre les clusters
 print('ROUTING')
 routing = GeoRouting(df_clusters)
-routing.increase(threshold_in_meters=15000)
+routing.increase(threshold_in_meters=50000, shortcut_factor=3)
 routes = routing.edges
 
 # 5 - Chargement des pois et des clusters dans neo4j
