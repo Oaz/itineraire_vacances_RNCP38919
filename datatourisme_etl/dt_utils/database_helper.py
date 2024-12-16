@@ -80,10 +80,10 @@ def collect_department_information_from_files(urls: list) -> pd.DataFrame:
     """
     data = []
     for url in urls:
-        poi_department_id, poi_department_name = helper.get_poi_department(url)
-        data.append([poi_department_id, poi_department_name])
+        poi_departement_id, poi_departement_name = helper.get_poi_department(url)
+        data.append([poi_departement_id, poi_departement_name])
     # On crée un dataframe pour stocker les résultats
-    department_df = pd.DataFrame(data, columns=["dt_department_id", "name"])
+    department_df = pd.DataFrame(data, columns=["dt_departement_id", "name"])
 
     return department_df
 
@@ -96,11 +96,13 @@ def collect_city_information_from_files(urls: list) -> pd.DataFrame:
     """
     data = []
     for url in urls:
-        poi_city_id, poi_city_name, poi_city_postcode = helper.get_poi_city(url)
-        data.append([poi_city_id, poi_city_postcode, poi_city_name])
+        # Récuperation de l'ID de la ville et de son nom
+        poi_city_id, poi_city_name = helper.get_poi_city(url)
+        # Récupération du département de la ville
+        poi_departement_id, poi_department_name = helper.get_poi_department(url)
+        data.append([poi_city_id, poi_departement_id, poi_city_name])
     # On crée un dataframe pour stocker les résultats
-    city_df = pd.DataFrame(data, columns=["dt_city_id", "postcode", "name"])
+    city_df = pd.DataFrame(data, columns=["dt_city_id","dt_departement_id","name"])
     # Et on supprime les doublons
     city_df = city_df.drop_duplicates()
     return city_df
-
