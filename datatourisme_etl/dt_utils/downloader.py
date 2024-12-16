@@ -14,14 +14,14 @@ def download_datatourisme_archive() -> bool:
     # Récupération des variables d'environnement définit dans le fichier .env
     dotenv.load_dotenv()
     # Répertoire de stockage de l'archive ZIP brute
-    download_path = "../raw_archive"
+    download_path = "./raw_archive"
     os.makedirs(download_path, exist_ok=True)
     file_path = os.path.join(download_path, "archive.zip")
 
     # Téléchargement du fichier ZIP depuis datatourisme
     url = os.getenv("DATATOURISME_URL_FLUX") + os.getenv("DATATOURISME_API_KEY")
 
-    if not check_file_exists("../raw_archive", "archive.zip"):
+    if not check_file_exists("./raw_archive", "archive.zip"):
 
         try:
             response = requests.get(url, stream=True)
@@ -41,10 +41,10 @@ def download_datatourisme_archive() -> bool:
 
 def extract_data():
     try:
-        with zipfile.ZipFile("../raw_archive/archive.zip", "r") as zip_ref:
-            zip_ref.extractall("../data")
+        with zipfile.ZipFile("./raw_archive/archive.zip", "r") as zip_ref:
+            zip_ref.extractall("./data")
             # Destruction de l'archive téléchargée
-            shutil.rmtree("../raw_archive")
+            shutil.rmtree("./raw_archive")
         return True
     except zipfile.BadZipFile:
         return False
@@ -54,7 +54,7 @@ def download_datatourisme_categories() -> bool:
     Permet de télécharger le fichier ontology.TTL de datatourisme
     """
     # Répertoire de stockage temporaire du fichier ontology.TTL
-    download_path = "../temporary_categories"
+    download_path = "./temporary_categories"
     os.makedirs(download_path, exist_ok=True)
     file_path = os.path.join(download_path, "ontology.TTL")
 
