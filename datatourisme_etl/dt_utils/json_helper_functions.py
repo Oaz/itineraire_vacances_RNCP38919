@@ -125,7 +125,7 @@ def get_poi_department(filename: str) -> tuple[str, str] | tuple[None, None]:
         print(f"Erreur de clé: {e}. Vérifier la structure et recommencer.")
         return None, None
 
-def get_poi_city(filename: str) -> tuple[str, str, str] | tuple[None, None]:
+def get_poi_city(filename: str) -> tuple[str, str] | tuple[None, None]:
     """
     Récupère la ville du point d'intérêt dans le fichier JSON
     :param filename: str
@@ -136,8 +136,8 @@ def get_poi_city(filename: str) -> tuple[str, str, str] | tuple[None, None]:
     try:
         _poi_city_id = content["isLocatedAt"][0]["schema:address"][0]["hasAddressCity"]["@id"]
         _poi_city = content["isLocatedAt"][0]["schema:address"][0]["hasAddressCity"]["rdfs:label"]["fr"][0]
-        _poi_postcode = content["isLocatedAt"][0]["schema:address"][0]["schema:postalCode"]
-        return _poi_city_id, _poi_city, _poi_postcode
+        #_poi_postcode = content["isLocatedAt"][0]["schema:address"][0]["schema:postalCode"]
+        return _poi_city_id, _poi_city
     except KeyError as e:
         print(f"Erreur de clé: {e}. Vérifier la structure et recommencer.")
         return None, None
