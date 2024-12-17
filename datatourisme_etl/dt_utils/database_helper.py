@@ -41,7 +41,7 @@ def save_dataframe_to_postgres(df: pd.DataFrame, table_name: str, engine: create
     """
     df.to_sql(table_name, engine, if_exists=if_exists, index=False)
 
-def parse_index_datatourisme(index_path:str = "../data/index.json") -> list:
+def parse_index_datatourisme(index_path:str = "./data/index.json") -> list:
     """
     Parse le fichier index.json pour récupérer les URL des fichiers JSON.
 
@@ -81,9 +81,10 @@ def collect_department_information_from_files(urls: list) -> pd.DataFrame:
     data = []
     for url in urls:
         poi_departement_id, poi_departement_name = helper.get_poi_department(url)
-        data.append([poi_departement_id, poi_departement_name])
+        poi_region_id, poi_region_name = helper.get_poi_region(url)
+        data.append([poi_departement_id, poi_region_id, poi_departement_name])
     # On crée un dataframe pour stocker les résultats
-    department_df = pd.DataFrame(data, columns=["dt_departement_id", "name"])
+    department_df = pd.DataFrame(data, columns=["dt_departement_id", "dt_region_id", "name"])
 
     return department_df
 
@@ -106,3 +107,26 @@ def collect_city_information_from_files(urls: list) -> pd.DataFrame:
     # Et on supprime les doublons
     city_df = city_df.drop_duplicates()
     return city_df
+
+def collect_all_categories(urls: list) -> pd.DataFrame:
+    """
+    Remplissage de la table Category à partir du fichier ontology.TTL
+    :param urls: list - La liste des URL des fichiers JSON
+    :return: pd.DataFrame - Le DataFrame contenant la liste des catégories à insérer dans la table Category
+    """
+    # On récupère les catégories de POI et on les ajoute à un set
+    # pour s'assurer de leur unicité
+    # Si on récupère une liste, on l'eclate et on ajoute chaque élément un à un dans le set
+
+    categories = set()
+    for url in urls:
+        poi_category = helper.get_poi_category(url)
+        if isinstance(poi_category, list):
+            for category in poi_category:
+                categories.add(category)
+        else:
+            categories.add(poi_category)
+
+    # Transformation du set en DataFrame
+    category_df = pd.DataFrame(categories, columns=["name"])
+    return category_df
