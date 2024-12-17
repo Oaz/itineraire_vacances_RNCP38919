@@ -77,9 +77,3 @@ def download_datatourisme_categories() -> bool:
             return False
     else:
         pass
-
-if __name__ == "__main__":
-    # Pour tester le script en appel direct
-    # Affiche True si le téléchargement s'est bien passé, False sinon
-    if download_datatourisme_archive():
-        extract_data()
