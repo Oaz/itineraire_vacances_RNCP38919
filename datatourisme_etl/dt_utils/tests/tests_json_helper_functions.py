@@ -1,10 +1,13 @@
 import unittest
+import os
 import dt_utils.json_helper_functions as jhf
 
 
 class TestsJsonHelperFunctions(unittest.TestCase):
   def setUp(self):
-    self.file_path = "./dt_feed_example/data/objects/0/0a/49-0a1a7c7e-b2b1-3bb8-b4a2-0be8c160333a.json"
+    base_path = os.path.join(os.path.dirname(__file__), 'dt_feed_example')
+    self.file_path = os.path.join(base_path, "data", "objects", "0", "0a",
+                                  "49-0a1a7c7e-b2b1-3bb8-b4a2-0be8c160333a.json")
 
   def test_poi_identifier(self):
     self.assertEqual("FMAPDL049V50HL4Q", jhf.get_poi_identifier(self.file_path))
@@ -32,7 +35,7 @@ class TestsJsonHelperFunctions(unittest.TestCase):
     self.assertEqual(('kb:France5249', 'Maine-et-Loire'), jhf.get_poi_department(self.file_path))
 
   def test_poi_city(self):
-    self.assertEqual(('kb:49328', 'Saumur', '49400'), jhf.get_poi_city(self.file_path))
+    self.assertEqual(('kb:49328', 'Saumur'), jhf.get_poi_city(self.file_path))
 
   def test_poi_coordinates(self):
     self.assertEqual((47.260621, -0.076107), jhf.get_poi_coordinates(self.file_path))

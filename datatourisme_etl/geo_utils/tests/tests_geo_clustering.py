@@ -1,4 +1,5 @@
 import math
+import os
 import unittest
 import pandas as pd
 from geo_utils.geo_clustering import GeoClustering, compute_xy
@@ -6,7 +7,7 @@ from geo_utils.geo_clustering import GeoClustering, compute_xy
 
 class TestsGeoClustering(unittest.TestCase):
   def setUp(self):
-    pois = pd.read_csv("poi_lat_lon.csv", sep=',')
+    pois = pd.read_csv(os.path.join(os.path.dirname(__file__), 'poi_lat_lon.csv'), sep=',')
     self.clustering = GeoClustering(pois)
 
   def test_wrong_lat_lon_do_not_fail(self):

@@ -1,4 +1,5 @@
 import unittest
+import os
 import pandas as pd
 from geo_utils.geo_clustering import GeoClustering
 from geo_utils.geo_routing import GeoRouting
@@ -7,7 +8,7 @@ from geo_utils.geo_routing import GeoRouting
 class TestsGeoRouting(unittest.TestCase):
   @classmethod
   def setUpClass(cls):
-    pois = pd.read_csv("poi_lat_lon.csv", sep=',')
+    pois = pd.read_csv(os.path.join(os.path.dirname(__file__), 'poi_lat_lon.csv'), sep=',')
     clustering = GeoClustering(pois)
     clustering.create_clusters()
     clustering.increase_clusters(5000)
