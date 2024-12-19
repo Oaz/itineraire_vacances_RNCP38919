@@ -2,7 +2,7 @@ import os
 import unittest
 import pandas as pd
 from testcontainers.neo4j import Neo4jContainer
-import dt_utils.neo4j_helper as nh
+import utils.neo4j_helper as nh
 
 
 class TestNeo4jIntegration(unittest.TestCase):

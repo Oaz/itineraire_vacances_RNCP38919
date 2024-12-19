@@ -1,7 +1,7 @@
 import os
 import unittest
 from testcontainers.postgres import PostgresContainer
-import dt_utils.database_helper as dh
+import utils.database_helper as dh
 from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 

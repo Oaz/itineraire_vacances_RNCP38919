@@ -1,6 +1,6 @@
 import fireducks.pandas as pd
 import json
-import dt_utils.json_helper_functions as helper
+import utils.json_helper_functions as helper
 import dotenv
 import os
 from sqlalchemy import create_engine, inspect, Engine

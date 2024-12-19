@@ -1,6 +1,6 @@
 import unittest
 import os
-import dt_utils.json_helper_functions as jhf
+import utils.json_helper_functions as jhf
 
 
 class TestsJsonHelperFunctions(unittest.TestCase):

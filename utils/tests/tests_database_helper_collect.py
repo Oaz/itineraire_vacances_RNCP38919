@@ -1,6 +1,6 @@
 import unittest
 import os
-import dt_utils.database_helper as dh
+import utils.database_helper as dh
 
 
 class TestsJsonHelperFunctions(unittest.TestCase):

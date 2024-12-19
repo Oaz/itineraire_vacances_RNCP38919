@@ -1,8 +1,8 @@
 import unittest
 import os
 import pandas as pd
-from geo_utils.geo_clustering import GeoClustering
-from geo_utils.geo_routing import GeoRouting
+from utils.geo_clustering import GeoClustering
+from utils.geo_routing import GeoRouting
 
 
 class TestsGeoRouting(unittest.TestCase):

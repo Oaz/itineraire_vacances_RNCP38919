@@ -2,7 +2,7 @@ import math
 import os
 import unittest
 import pandas as pd
-from geo_utils.geo_clustering import GeoClustering, compute_xy
+from utils.geo_clustering import GeoClustering, compute_xy
 
 
 class TestsGeoClustering(unittest.TestCase):
