@@ -93,7 +93,7 @@ class TestNeo4jIntegration(unittest.TestCase):
     self.util_import_pois()
     self.util_import_clusters()
     nh.import_routes(
-      self.driver, {
+      self.driver, "Culture", {
         (0, 1): 954
       }
     )

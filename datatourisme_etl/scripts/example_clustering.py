@@ -1,10 +1,10 @@
 import os
 import json
 import pandas as pd
-import dt_utils.json_helper_functions as jh
-import dt_utils.neo4j_helper as nh
-from geo_utils.geo_clustering import GeoClustering
-from geo_utils.geo_routing import GeoRouting
+import utils.json_helper_functions as jh
+import utils.neo4j_helper as nh
+from utils.geo_clustering import GeoClustering
+from utils.geo_routing import GeoRouting
 
 #########################
 # Exemple de script ETL pour les clusters
@@ -16,6 +16,11 @@ from geo_utils.geo_routing import GeoRouting
 # 1 - Choix d'une catégorie
 # Les clusters sont des regroupements de POIs voisins géographiques et de même catégorie
 category = 'CulturalSite'
+# category = 'CulturalEvent'
+# category = 'LeisureComplex'
+# category = 'SelfCateringAccommodation'
+# category = 'SportsAndLeisurePlace'
+# category = 'ThemePark'
 
 # 2 - Extraction des données
 # Dans ce script, c'est la fonction 'create_pois_dataframe' qui lit les données dans les fichiers
@@ -81,7 +86,7 @@ with nh.connect_to_neo4j() as driver:
   print('  CLUSTERS')
   nh.import_clusters(driver, category, df_clusters, df_vicinities)
   print('  ROUTES')
-  nh.import_routes(driver, routes)
+  nh.import_routes(driver, category, routes)
 
 print('DONE')
 

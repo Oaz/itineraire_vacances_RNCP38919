@@ -75,17 +75,21 @@ def import_clusters(driver: neo4j.Driver, category: str, df_clusters: pd.DataFra
     """, vicinities=vicinities)
 
 
-def import_routes(driver: neo4j.Driver, routes: Dict[Tuple[int, int], int]):
+def import_routes(driver: neo4j.Driver, category: str, routes: Dict[Tuple[int, int], int]):
   """
   Importe des routes entre les clusters
   :param driver:
+  :param category: La catégorie associé à tous les clusters reliés
   :param routes: dictionnaire des distances pour chaque route entre 2 clusters
   :return:
   """
   with driver.session() as session:
     session.run("""
         UNWIND $routes AS r
-        MATCH (c1:Cluster {id: r.a}), (c2:Cluster {id: r.b})
+        MATCH (c1:Cluster {id: r.a, category: $category}), (c2:Cluster {id: r.b, category: $category})
         CREATE (c1)-[:ROUTE {distance: r.distance}]->(c2)
         CREATE (c2)-[:ROUTE {distance: r.distance}]->(c1)
-    """, routes=[{"a": a, "b": b, "distance": distance} for ((a, b), distance) in routes.items()])
+    """, category=category, routes=[
+      {"a": a, "b": b, "distance": distance}
+      for ((a, b), distance) in routes.items()
+    ])
