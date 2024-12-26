@@ -15,6 +15,5 @@
 **/*.jsonld
 **/*.csv
 
-# Ignorer les fichiers de base de données DuckDB
-**/*.db
-**/*.db.wal
+# Ignorer les fichiers de logs Airflow
+airflow/logs
