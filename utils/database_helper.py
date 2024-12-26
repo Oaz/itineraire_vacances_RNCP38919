@@ -4,6 +4,9 @@ import utils.json_helper_functions as helper
 import dotenv
 import os
 from sqlalchemy import create_engine, inspect, Engine
+from typing import List
+import psycopg2
+from .point_of_interest_helper import Poi
 
 # Chargement des variables d'environnement
 dotenv.load_dotenv()
@@ -130,3 +133,197 @@ def collect_all_categories(urls: list) -> pd.DataFrame:
     # Transformation du set en DataFrame
     category_df = pd.DataFrame(categories, columns=["name"])
     return category_df
+
+def connect_to_db_V2():
+    """
+    Crée une connexion à la base de données PostgreSQL.
+    """
+    return psycopg2.connect(
+        dbname=os.getenv('POSTGRES_DB'),
+        user=os.getenv('POSTGRES_USER'),
+        password=os.getenv('POSTGRES_PASSWORD'),
+        host=os.getenv('POSTGRES_HOST'),
+        port=os.getenv('POSTGRES_PORT')
+    )
+
+def get_all_pois_from_db(conn) -> List[Poi]:
+    """
+    Récupère tous les POIs de la base de données.
+
+    :param
+        conn: Connexion à la base de données PostgreSQL.
+
+    :return
+        List[Poi]: Liste des objets Poi.
+    """
+    query = """
+    SELECT * FROM Point_Of_Interest AS poi
+    """
+    pois = []
+    with conn.cursor() as cursor:
+        cursor.execute(query)
+        results = cursor.fetchall()
+        for row in results:
+            # Extraire les informations
+            poi_id, osm_node_id, name, rating, created_at, updated_at, latitude, longitude, postal_code, city = row
+
+            # Créer une instance de la classe Poi
+            poi = Poi(
+                id=poi_id,
+                name=name,
+                rating=rating,
+                created_at=created_at,
+                updated_at=updated_at,
+                latitude=latitude,
+                longitude=longitude,
+                postal_code=postal_code,
+                city=city,
+                categories=[],
+                osm_node_id=osm_node_id 
+            )
+            pois.append(poi)
+    return pois
+
+
+def add_poi_to_db(conn, poi: Poi):
+    """
+    Ajoute un POI dans la base de données.
+
+    :param
+        conn: Connexion à la base de données PostgreSQL.
+        poi (Poi): POI à ajouter.
+    """
+    with conn.cursor() as cursor:
+        # Vérifier ou insérer la région
+        cursor.execute(
+            "INSERT INTO region (dt_region_id, name) VALUES (%s, %s) ON CONFLICT (dt_region_id) DO NOTHING",
+            (poi.city.departement.region.id, poi.city.departement.region.name)
+        )
+        # Vérifier ou insérer le département
+        cursor.execute(
+            "INSERT INTO departement (dt_departement_id, name, dt_region_id) VALUES (%s, %s, %s) ON CONFLICT (dt_departement_id) DO NOTHING",
+            (poi.city.departement.id, poi.city.departement.name, poi.city.departement.region.id)
+        )
+        # Vérifier ou insérer la ville
+        cursor.execute(
+            "INSERT INTO city (dt_city_id, name, dt_departement_id) VALUES (%s, %s, %s) ON CONFLICT (dt_city_id) DO NOTHING",
+            (poi.city.id, poi.city.name, poi.city.departement.id)
+        )
+        # Insérer le POI
+        cursor.execute(
+            """
+            INSERT INTO point_of_interest (
+                dt_poi_id, name, rating, dt_created_at, dt_updated_at,
+                latitude, longitude, postal_code, dt_city_id, osm_node_id
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (dt_poi_id) DO NOTHING
+            """,
+            (
+                poi.id, poi.name, poi.rating, poi.created_at, poi.updated_at,
+                poi.latitude, poi.longitude, poi.postal_code, poi.city.id, poi.osm_node_id
+            )
+        )
+        # Insérer les catégories
+        for category in poi.categories:
+            cursor.execute(
+                """
+                INSERT INTO category (name)
+                VALUES (%s)
+                ON CONFLICT (name) DO NOTHING
+                RETURNING dt_category_id
+                """,
+                (category.name,)
+            )
+            result = cursor.fetchone()
+
+            if result:
+                category_id = result[0]  # ID retourné si l'insertion réussit
+            else:
+                # Rechercher l'ID existant si la catégorie était déjà présente
+                cursor.execute(
+                    "SELECT dt_category_id FROM category WHERE name = %s",
+                    (category.name,)
+                )
+                category_id = cursor.fetchone()[0]  # Récupérer l'ID inséré
+
+            # Lier le POI à la catégorie
+            cursor.execute(
+                """
+                INSERT INTO category_point_of_interest (dt_poi_id, dt_category_id)
+                VALUES (%s, %s)
+                ON CONFLICT DO NOTHING
+                """,
+                (poi.id, category_id)
+            )
+        conn.commit()
+
+
+def update_poi_in_db(conn, poi: Poi):
+    """
+    Met à jour un POI dans la base de données.
+
+    :param
+        conn: Connexion à la base de données PostgreSQL.
+        poi (Poi): POI à mettre à jour.
+    """
+    with conn.cursor() as cursor:
+        # Mettre à jour le POI
+        cursor.execute(
+            """
+            UPDATE point_of_interest
+            SET name = %s, rating = %s, dt_created_at = %s, dt_updated_at = %s,
+                latitude = %s, longitude = %s, postal_code = %s, dt_city_id = %s, osm_node_id = %s
+            WHERE dt_poi_id = %s
+            """,
+            (
+                poi.name, poi.rating, poi.created_at, poi.updated_at,
+                poi.latitude, poi.longitude, poi.postal_code, poi.city.id, poi.osm_node_id, poi.id
+            )
+        )
+        # Mettre à jour les catégories
+        cursor.execute(
+            "DELETE FROM category_point_of_interest WHERE dt_poi_id = %s",
+            (poi.id,)
+        )
+        for category in poi.categories:
+            cursor.execute(
+                "SELECT dt_category_id FROM category WHERE name = %s",
+                (category.name,)
+            )
+            result = cursor.fetchone()
+
+            if result:
+                category_id = result[0]  # Récupérer l'ID si la catégorie existe déjà
+            else:
+                # Insérer la catégorie si elle n'existe pas et récupérer l'ID
+                cursor.execute(
+                    "INSERT INTO category (name) VALUES (%s) RETURNING dt_category_id",
+                    (category.name,)
+                )
+                category_id = cursor.fetchone()[0]  # Récupérer l'ID inséré
+            cursor.execute(
+                """
+                INSERT INTO category_point_of_interest (dt_poi_id, dt_category_id)
+                VALUES (%s, %s)
+                ON CONFLICT DO NOTHING
+                """,
+                (poi.id, category_id)
+            )
+        conn.commit()
+
+def process_batch(pois: List[Poi], type: str):
+    """
+    Fonction pour mettre à jour/insérer créer un batch de POIs dans la base de données.
+
+    Args:
+        pois (List[Poi]): Liste des POIs à mettre à jour/insérer.
+        type (str): type d'action sur la base de donné "update" pour modifier et "insert" pour insérer
+    """
+    engine = connect_to_db_V2()
+    if type == "update":
+        for poi in pois:
+            update_poi_in_db(engine, poi)
+    if type == "insert":
+        for poi in pois:
+            add_poi_to_db(engine, poi)
+    engine.close()

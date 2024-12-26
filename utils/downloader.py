@@ -3,6 +3,7 @@ import dotenv
 import os
 import requests
 import zipfile
+import kagglehub
 
 
 def check_file_exists(directory: str, filename: str) -> bool:
@@ -39,7 +40,7 @@ def download_datatourisme_archive() -> bool:
         pass
 
 
-def extract_data():
+def extract_data() -> bool:
     try:
         with zipfile.ZipFile("./raw_archive/archive.zip", "r") as zip_ref:
             zip_ref.extractall("./data")
@@ -77,3 +78,31 @@ def download_datatourisme_categories() -> bool:
             return False
     else:
         pass
+
+def download_and_get_shapefile() -> str:
+    """
+    Télécharge les données géographiques (Shapefile) via KaggleHub.
+
+    :return
+        str : Chemin vers le fichier Shapefile.
+    """
+    print("Téléchargement des données géographiques...")
+    path = kagglehub.dataset_download("abdulkerimnee/ne-110m-admin-0-countries")
+    path_to_delete = path
+    shp_path = os.path.join(path, "ne_110m_admin_0_countries", "ne_110m_admin_0_countries.shp")
+
+    if not os.path.exists(shp_path):
+        raise FileNotFoundError(f"Fichier Shapefile non trouvé : {shp_path}")
+    return shp_path, path_to_delete
+
+def cleanup_downloaded_data(path: str) -> None:
+    """
+    Supprime les fichiers temporaires.
+
+    :param
+        path (str): Chemin du répertoire à supprimer.
+    """
+    print("Nettoyage des fichiers temporaires...")
+    if os.path.exists(path):
+        shutil.rmtree(path)
+        print(f"Supprimé : {path}")
