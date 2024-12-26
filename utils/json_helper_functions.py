@@ -6,6 +6,7 @@ from datetime import datetime
 import os
 import geopandas as gpd
 import multiprocessing
+from dateutil.parser import isoparse
 
 def get_poi_identifier(filename: str) -> str | None:
     """
@@ -229,7 +230,7 @@ def parse_poi_from_json(json_data: dict) -> Poi:
     """
     try:
         # Extraire les informations de base
-        poi_id = json_data.get("@id", "UnknownID")
+        poi_id = json_data.get("dc:identifier", "UnknownID")
         name = None
         label_fr = json_data.get("rdfs:label", {}).get("fr")
         if isinstance(label_fr, list):
@@ -245,7 +246,7 @@ def parse_poi_from_json(json_data: dict) -> Poi:
         updated_date_str = json_data.get("lastUpdateDatatourisme", "1970-01-01")
         try:
             # Convertir la date ISO 8601 en objet datetime
-            updated_at = datetime.fromisoformat(updated_date_str.replace("Z", ""))
+            updated_at = isoparse(updated_date_str)
         except ValueError:
             # En cas de format incorrect, utiliser une valeur par défaut
             print(f"Format de date invalide pour {updated_date_str}. Utilisation de la date par défaut.")
@@ -412,7 +413,7 @@ def get_france_geometry(shp_path: str) -> gpd.GeoDataFrame:
     :return
         gpd.GeoDataFrame : Géométrie de la France.
     """
-    world = gpd.read_file(shp_path)
+    world = gpd.read_file(shp_path, engine="pyogrio")
     return world[world['name'] == 'France']
 
 def filter_poi_in_france(pois: list[Poi], france_geometry: gpd.GeoDataFrame) -> list[str]:

@@ -4,7 +4,6 @@ networkx~=3.4.2
 scipy~=1.14.1
 SQLAlchemy~=2.0.36
 python-dotenv~=1.0.1
-fireducks~=1.1.4
 requests~=2.32.3
 hdbscan~=0.8.40
 scikit-learn~=1.6.0
@@ -15,3 +14,4 @@ geopandas==0.14.0
 pyogrio==0.10.0
 kagglehub==0.3.6
 shapely==2.0.6
+dateutils==0.6.12
