@@ -159,30 +159,56 @@ def get_all_pois_from_db(conn) -> List[Poi]:
     query = """
     SELECT * FROM Point_Of_Interest AS poi
     """
-    pois = []
     with conn.cursor() as cursor:
-        cursor.execute(query)
-        results = cursor.fetchall()
-        for row in results:
-            # Extraire les informations
-            poi_id, osm_node_id, name, rating, created_at, updated_at, latitude, longitude, postal_code, city = row
+      cursor.execute(query)
+      return _pois_query(cursor)
 
-            # Créer une instance de la classe Poi
-            poi = Poi(
-                id=poi_id,
-                name=name,
-                rating=rating,
-                created_at=created_at,
-                updated_at=updated_at,
-                latitude=latitude,
-                longitude=longitude,
-                postal_code=postal_code,
-                city=city,
-                categories=[],
-                osm_node_id=osm_node_id 
-            )
-            pois.append(poi)
-    return pois
+
+def select_pois_from_db(conn, category: str) -> List[Poi]:
+  """
+  Récupère tous les POIs de la base de données pour une catégorie.
+
+  :param
+      conn: Connexion à la base de données PostgreSQL.
+      category: Catégorie des POIs à sélectionner.
+
+  :return
+      List[Poi]: Liste des objets Poi.
+  """
+  query = """
+    SELECT poi.* FROM Point_Of_Interest AS poi
+    LEFT JOIN category_point_of_interest cpoi on poi.dt_poi_id = cpoi.dt_poi_id
+    LEFT JOIN category on cpoi.dt_category_id = category.dt_category_id
+    WHERE category.name = %s
+    """
+  with conn.cursor() as cursor:
+    cursor.execute(query, (category,))
+    return _pois_query(cursor)
+
+
+def _pois_query(cursor) -> List[Poi]:
+  pois = []
+  results = cursor.fetchall()
+  for row in results:
+    # Extraire les informations
+    poi_id, osm_node_id, name, rating, created_at, updated_at, latitude, longitude, postal_code, city = row
+
+    # Créer une instance de la classe Poi
+    poi = Poi(
+      id=poi_id,
+      name=name,
+      rating=rating,
+      created_at=created_at,
+      updated_at=updated_at,
+      latitude=latitude,
+      longitude=longitude,
+      postal_code=postal_code,
+      city=city,
+      categories=[],
+      osm_node_id=osm_node_id
+    )
+    pois.append(poi)
+  return pois
 
 
 def add_poi_to_db(conn, poi: Poi):
