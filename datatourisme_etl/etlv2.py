@@ -1,6 +1,14 @@
+from typing import List
 from utils import *
 from datetime import datetime
 import multiprocessing
+
+
+def process_batch_neo4j(pois: List[Poi]):
+    driver = connect_to_neo4j()
+    import_pois(driver, pois)
+    driver.close()
+
 
 if __name__ == "__main__":
 
@@ -56,8 +64,16 @@ if __name__ == "__main__":
     with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
         pool.starmap(process_batch, [(batch, "update") for batch in update_batches])
     start_get_poid_db_after = datetime.now()
-    
+
     print(f"Mise à jour terminée en {datetime.now() - start_update}")
+
+    # Parallélisation pour neo4j
+    print("Création ou mise à jour des POI dans le graphe")
+    neo4j_batches = [poi_list[i:i+batch_size] for i in range(0, len(poi_list), batch_size)]
+    start_neo4j = datetime.now()
+    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+        pool.starmap(process_batch_neo4j, [(batch,) for batch in neo4j_batches])
+    print(f"Mise à jour du graphe terminée en {datetime.now() - start_neo4j}")
 
     #clean des fichiers / conn
     cleanup_downloaded_data(path_to_delete)

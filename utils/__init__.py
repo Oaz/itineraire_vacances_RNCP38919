@@ -3,7 +3,7 @@ from .database_helper import connect_to_db, show_tables, save_dataframe_to_postg
 from .geo_clustering import compute_xy, GeoClustering
 from .geo_routing import GeoRouting
 from .json_helper_functions import get_poi_identifier, get_poi_name, get_poi_creation_date, get_poi_update_date, find_last_update_by_label, get_poi_category, category_cleanup, get_poi_region, get_poi_department, get_poi_city, get_poi_postal_code, get_poi_coordinates, parse_poi_from_json, get_all_poi, get_all_poi_metadata, get_france_geometry, filter_poi_in_france, parse_poi_batch, get_all_poi_parallel
-from .neo4j_helper import connect_to_neo4j, import_pois, sanitize, import_clusters, import_routes
+from .neo4j_helper import connect_to_neo4j, import_pois, import_clusters, import_routes
 from .point_of_interest_helper import Poi, PoiMetadata, Category, City, Departement, Region, compare_pois
 
 # Liste des éléments accessibles via `from dt_utils import *`
@@ -48,8 +48,7 @@ __all__ = [
     "parse_poi_batch", 
     "get_all_poi_parallel",
     "connect_to_neo4j",
-    "import_pois", 
-    "sanitize", 
+    "import_pois",
     "import_clusters", 
     "import_routes",
     "download_and_get_shapefile",

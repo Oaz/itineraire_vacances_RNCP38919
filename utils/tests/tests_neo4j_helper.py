@@ -1,8 +1,10 @@
 import os
 import unittest
+import json
 import pandas as pd
 from testcontainers.neo4j import Neo4jContainer
 import utils.neo4j_helper as nh
+import utils.json_helper_functions as jhf
 
 
 class TestNeo4jIntegration(unittest.TestCase):
@@ -13,7 +15,6 @@ class TestNeo4jIntegration(unittest.TestCase):
     cls.neo4j_container = Neo4jContainer("neo4j:5")
     cls.neo4j_container.with_env("NEO4J_AUTH", f"{user}/{password}")
     cls.neo4j_container.start()
-    print(cls.neo4j_container.get_connection_url())
     os.environ["NEO4J_URL"] = cls.neo4j_container.get_connection_url()
     os.environ["NEO4J_USER"] = user
     os.environ["NEO4J_PASSWORD"] = password
@@ -31,42 +32,54 @@ class TestNeo4jIntegration(unittest.TestCase):
       record = result.single()
       self.assertEqual(record["message"], "Hello, World")
 
-  def test_import_pois_from_dataframe(self):
-    self.util_import_pois()
+  def test_import_pois(self):
+    nh.import_pois(self.driver, [
+      self._create_poi('1/17/33-17098a45-4a4d-31c3-a9ad-37991f14d5e0.json'),
+      self._create_poi('3/31/33-3106eeed-0b75-3acf-a5a9-6fb1a59a8cfe.json')
+    ])
     with self.driver.session() as session:
       self.assertEqual(
-        {'id': 'ABC', 'name': 'Lorem ipsum', 'x': 1000, 'y': 666},
-        session.run("MATCH (poi:POI) WHERE poi.id='ABC' RETURN poi").single().data()['poi']
+        {'id': 'FMAMID031V50XVYF', 'name': 'MEURTRE AUX JACOBINS', 'x': 574007, 'y': 6279539},
+        session.run("MATCH (poi:POI) WHERE poi.id='FMAMID031V50XVYF' RETURN poi").single().data()['poi']
       )
       self.assertEqual(
-        {'id': 'GHI', 'name': 'doctus eripuit probatus', 'x': 3000, 'y': 888},
-        session.run("MATCH (poi:POI) WHERE poi.id='GHI' RETURN poi").single().data()['poi']
+        {'id': 'FMAMID031V50RLX8', 'name': 'MARCHE DE NOEL PLACE DU CAPITOLE', 'x': 574298, 'y': 6279554},
+        session.run("MATCH (poi:POI) WHERE poi.id='FMAMID031V50RLX8' RETURN poi").single().data()['poi']
       )
 
-  def test_update_pois_from_dataframe(self):
-    self.util_import_pois()
-    nh.import_pois(self.driver, pd.DataFrame({
-      'id': ['DEF', 'GHI'],
-      'name': ['Hello', 'World'],
-      'x': [5000, 3000],
-      'y': [777, 888],
-    }))
+  def test_update_pois(self):
+    poi = self._create_poi('1/17/33-17098a45-4a4d-31c3-a9ad-37991f14d5e0.json')
+    nh.import_pois(self.driver, [
+      poi,
+      self._create_poi('3/31/33-3106eeed-0b75-3acf-a5a9-6fb1a59a8cfe.json')
+    ])
+    poi.name = 'MEURTRE AU COUVENT DES JACOBINS'
+    poi.latitude = 43.603
+    nh.import_pois(self.driver, [
+      poi,
+      self._create_poi('4/42/41-42ea9b5e-3fbf-3f57-8e31-0bc91ae4c0ec.json')
+    ])
     with self.driver.session() as session:
       self.assertEqual(
-        {'id': 'ABC', 'name': 'Lorem ipsum', 'x': 1000, 'y': 666},
-        session.run("MATCH (poi:POI) WHERE poi.id='ABC' RETURN poi").single().data()['poi']
+        {'id': 'FMAMID031V50XVYF', 'name': 'MEURTRE AU COUVENT DES JACOBINS', 'x': 574005, 'y': 6279460},
+        session.run("MATCH (poi:POI) WHERE poi.id='FMAMID031V50XVYF' RETURN poi").single().data()['poi']
       )
       self.assertEqual(
-        {'id': 'DEF', 'name': 'Hello', 'x': 5000, 'y': 777},
-        session.run("MATCH (poi:POI) WHERE poi.id='DEF' RETURN poi").single().data()['poi']
+        {'id': 'FMAMID031V50RLX8', 'name': 'MARCHE DE NOEL PLACE DU CAPITOLE', 'x': 574298, 'y': 6279554},
+        session.run("MATCH (poi:POI) WHERE poi.id='FMAMID031V50RLX8' RETURN poi").single().data()['poi']
       )
       self.assertEqual(
-        {'id': 'GHI', 'name': 'World', 'x': 3000, 'y': 888},
-        session.run("MATCH (poi:POI) WHERE poi.id='GHI' RETURN poi").single().data()['poi']
+        {'id': 'PCULAR0110000002', 'name': 'CHÂTEAU ET REMPARTS DE LA CITÉ DE CARCASSONNE',
+         'x': 648209, 'y': 6234412},
+        session.run("MATCH (poi:POI) WHERE poi.id='PCULAR0110000002' RETURN poi").single().data()['poi']
       )
 
   def test_import_clusters_from_dataframe(self):
-    self.util_import_pois()
+    nh.import_pois(self.driver, [
+      self._create_poi('1/17/33-17098a45-4a4d-31c3-a9ad-37991f14d5e0.json'),
+      self._create_poi('3/31/33-3106eeed-0b75-3acf-a5a9-6fb1a59a8cfe.json'),
+      self._create_poi('4/42/41-42ea9b5e-3fbf-3f57-8e31-0bc91ae4c0ec.json')
+    ])
     self.util_import_clusters()
     with self.driver.session() as session:
       self.assertEqual([
@@ -82,15 +95,20 @@ class TestNeo4jIntegration(unittest.TestCase):
         in session.run("MATCH (c:Cluster) WHERE c.category='Culture' RETURN c ORDER BY c.id").fetch(2)
       ])
       self.assertEqual([
-        {'id': 'ABC', 'name': 'Lorem ipsum', 'x': 1000, 'y': 666},
-        {'id': 'GHI', 'name': 'doctus eripuit probatus', 'x': 3000, 'y': 888}
+        {'id': 'FMAMID031V50XVYF', 'name': 'MEURTRE AUX JACOBINS', 'x': 574007, 'y': 6279539},
+        {'id': 'PCULAR0110000002', 'name': 'CHÂTEAU ET REMPARTS DE LA CITÉ DE CARCASSONNE',
+         'x': 648209, 'y': 6234412},
       ], [
         record.data()['p'] for record
         in session.run("MATCH (c:Cluster)-[v:VICINITY]-(p:POI) WHERE c.id=1 RETURN p ORDER BY p.id").fetch(2)
       ])
 
   def test_import_routes(self):
-    self.util_import_pois()
+    nh.import_pois(self.driver, [
+      self._create_poi('1/17/33-17098a45-4a4d-31c3-a9ad-37991f14d5e0.json'),
+      self._create_poi('3/31/33-3106eeed-0b75-3acf-a5a9-6fb1a59a8cfe.json'),
+      self._create_poi('4/42/41-42ea9b5e-3fbf-3f57-8e31-0bc91ae4c0ec.json')
+    ])
     self.util_import_clusters()
     nh.import_routes(
       self.driver, "Culture", {
@@ -103,13 +121,13 @@ class TestNeo4jIntegration(unittest.TestCase):
         in session.run("MATCH (c:Cluster)-[r:ROUTE]->(:Cluster) RETURN c.id, r.distance ORDER BY c.id").fetch(5)
       ])
 
-  def util_import_pois(self):
-    nh.import_pois(self.driver, pd.DataFrame({
-      'id': ['ABC', 'DEF', 'GHI'],
-      'name': ['Lorem ipsum', 'dolor sit amet', 'doctus eripuit probatus'],
-      'x': [1000, 2000, 3000],
-      'y': [666, 777, 888],
-    }))
+  @staticmethod
+  def _create_poi(path):
+    base_path = os.path.join(os.path.dirname(__file__), 'dt_feed_example')
+    file_path = os.path.join(base_path, "data", "objects", path)
+    with open(file_path, 'r') as file:
+      json_data = json.load(file)
+      return jhf.parse_poi_from_json(json_data)
 
   def util_import_clusters(self):
     nh.import_clusters(
@@ -121,7 +139,7 @@ class TestNeo4jIntegration(unittest.TestCase):
         'count': [6, 17],
         'density': [2, 5],
       }), pd.DataFrame({
-        'id': ['ABC', 'DEF', 'GHI'],
+        'id': ['FMAMID031V50XVYF', 'FMAMID031V50RLX8', 'PCULAR0110000002'],
         'cluster': [1, 0, 1],
       })
     )

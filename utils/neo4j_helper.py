@@ -1,8 +1,10 @@
-from typing import Tuple, Dict
+from typing import Tuple, Dict, List
 import os
 import re
 import neo4j as neo4j
 import pandas as pd
+from pyproj import Transformer
+from utils.point_of_interest_helper import Poi
 
 
 def connect_to_neo4j() -> neo4j.Driver:
@@ -16,26 +18,39 @@ def connect_to_neo4j() -> neo4j.Driver:
   )
 
 
-def import_pois(driver: neo4j.Driver, df: pd.DataFrame):
+# EPSG:9794 est le code EPSG pour la projection "RGF93 v2b / Lambert-93" utilisée en France
+# cf https://fr.wikipedia.org/wiki/Projection_conique_conforme_de_Lambert#Lambert_93
+transformer = Transformer.from_crs("EPSG:4326", "EPSG:9794", always_xy=True)
+
+
+def _encode_poi(poi: Poi) -> dict | None:
+  try:
+    x, y = transformer.transform(poi.longitude, poi.latitude)
+    return {'id': poi.id, 'name': poi.name, 'x': int(x), 'y': int(y)}
+  except OverflowError:
+    return None
+
+
+def import_pois(driver: neo4j.Driver, pois: List[Poi]):
   '''
-  Importe un DataFrame de POIS dans neo4j
+  Importe une liste de POIS dans neo4j
   Si le POI n'existe pas, il est créé. S'il existe déjà avec le même identifiant, il est modifié.
+  Les coordonnées x,y de chaque POI sont calculées et importées à partir des latitude et longitude
 
   :param driver:
-  :param df: Le DataFrame à importer
+  :param pois: Les POIs à importer
   :return:
   '''
-  pois = df.to_dict(orient="records")
   with driver.session() as session:
     session.run("CREATE INDEX IF NOT EXISTS FOR (poi:POI) ON (poi.id)")
     session.run("""
             UNWIND $pois AS poi
             MERGE (p:POI {id: poi.id})
             SET p = poi
-        """, pois=pois)
+        """, pois=[d for poi in pois if (d := _encode_poi(poi)) is not None])
 
 
-def sanitize(text: str) -> str:
+def _sanitize(text: str) -> str:
   """
   Sanitize to prevent injection.
   """
@@ -55,7 +70,7 @@ def import_clusters(driver: neo4j.Driver, category: str, df_clusters: pd.DataFra
   :param df_vicinities: Les rattachements cluster-POI
   :return:
   """
-  category = sanitize(category)
+  category = _sanitize(category)
   clusters = [
     {
       "id": index, "x": row["x"], "y": row["y"], "category": category,
