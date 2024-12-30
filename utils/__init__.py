@@ -5,6 +5,7 @@ from .geo_routing import GeoRouting
 from .json_helper_functions import get_poi_identifier, get_poi_name, get_poi_creation_date, get_poi_update_date, find_last_update_by_label, get_poi_category, category_cleanup, get_poi_region, get_poi_department, get_poi_city, get_poi_postal_code, get_poi_coordinates, parse_poi_from_json, get_all_poi, get_all_poi_metadata, get_france_geometry, filter_poi_in_france, parse_poi_batch, get_all_poi_parallel
 from .neo4j_helper import connect_to_neo4j, import_pois, import_clusters, import_routes
 from .point_of_interest_helper import Poi, PoiMetadata, Category, City, Departement, Region, compare_pois
+from .temporary_objects import object_store, object_read, object_delete
 
 # Liste des éléments accessibles via `from dt_utils import *`
 __all__ = [
@@ -59,5 +60,8 @@ __all__ = [
     "City", 
     "Departement", 
     "Region",
-    "compare_pois"
+    "compare_pois",
+    "object_store",
+    "object_read",
+    "object_delete",
 ]
