@@ -211,8 +211,9 @@ services:
     image: pbweb/airflow-prometheus-exporter
     restart: always
     environment:
-        - "AIRFLOW_PROMETHEUS_LISTEN_ADDR=9112"
-        - "AIRFLOW_PROMETHEUS_DATABASE_BACKEND=pgsql"
+        - "AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow"
+        - "AIRFLOW_PROMETHEUS_LISTEN_ADDR=:9112"
+        - "AIRFLOW_PROMETHEUS_DATABASE_BACKEND=postgres"
         - "AIRFLOW_PROMETHEUS_DATABASE_HOST=postgres"
         - "AIRFLOW_PROMETHEUS_DATABASE_PORT=5432"
         - "AIRFLOW_PROMETHEUS_DATABASE_USER=airflow"
