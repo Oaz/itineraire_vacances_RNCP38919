@@ -40,18 +40,9 @@ x-airflow-common: &airflow-common
     _PIP_ADDITIONAL_REQUIREMENTS: "-r /opt/airflow/utils/requirements.txt"
 
   volumes:
-    - ./airflow/dags:/opt/airflow/dags
-    - ./airflow/logs:/opt/airflow/logs
-    - ./airflow/plugins:/opt/airflow/plugins
-    - ./airflow/raw_files:/opt/airflow/raw_files
-    - ./airflow/clean_data:/opt/airflow/clean_data
-    - ./utils:/opt/airflow/utils
-    - type: bind
-      source: ./clean_data
-      target: /app/clean_data
-    - type: bind
-      source: ./raw_files
-      target: /app/raw_files
+    - ./airflow/dags:/opt/airflow/dags:ro
+    - airflow_logs:/opt/airflow/logs
+    - ./utils:/opt/airflow/utils:ro
   user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-50000}"
   depends_on:
     redis:
@@ -237,7 +228,7 @@ services:
     ports:
       - 9090:9090
     volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
     restart: always
@@ -251,7 +242,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - grafana-storage:/var/lib/grafana
-      - ./monitoring/grafana:/etc/grafana/provisioning
+      - ./monitoring/grafana:/etc/grafana/provisioning:ro
     depends_on:
       - prometheus
     restart: always
@@ -271,4 +262,6 @@ volumes:
   postgres-db-volume:
   neo4j_data:
   neo4j_logs:
+  airflow_logs:
   grafana-storage:
+
