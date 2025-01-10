@@ -1,0 +1,457 @@
+import os
+import uuid
+import json
+import redis
+import logging
+import datetime
+from datetime import timedelta
+import psycopg2
+from typing import List
+from airflow import DAG
+from airflow.decorators import task
+from airflow.models import Variable
+from airflow.utils.trigger_rule import TriggerRule
+from utils import *
+import neo4j as neo4j
+
+# Variables Airflow
+CUR_DIR = os.path.abspath(os.path.dirname(__file__))
+POSTGRES_HOST = Variable.get("POSTGRES_HOST")
+POSTGRES_PORT = Variable.get("POSTGRES_PORT")
+POSTGRES_USER = Variable.get("POSTGRES_USER")
+POSTGRES_PASSWORD = Variable.get("POSTGRES_PASSWORD")
+POSTGRES_DB = Variable.get("POSTGRES_DB")
+POSTGRES_DATATOURISME_DB = Variable.get("POSTGRES_DATATOURISME_DB")
+REDIS_HOST = Variable.get("REDIS_HOST")
+REDIS_PORT = Variable.get("REDIS_PORT")
+URL_ARCHIVE = Variable.get("URL_ARCHIVE")
+NEO4J_USER = Variable.get("NEO4J_USER")
+NEO4J_PASSWORD = Variable.get("NEO4J_PASSWORD")
+NEO4J_URL = Variable.get("NEO4J_URL")
+
+def get_redis_client():
+    """
+    Retourne un client Redis.
+    """
+    return redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+
+
+with DAG(
+    "datatourisme_etl_v2",
+    description="ETL DataTourisme avec Redis, PostgreSQL, et traitement par lots dynamiques",
+    schedule_interval=timedelta(days=1),
+    start_date=datetime.datetime(2024, 12, 8),
+    catchup=False,
+) as dag:
+
+    @task
+    def check_postgres_service():
+        try:
+            connection = psycopg2.connect(
+                host=POSTGRES_HOST,
+                port=POSTGRES_PORT,
+                user=POSTGRES_USER,
+                password=POSTGRES_PASSWORD,
+                dbname=POSTGRES_DB,
+            )
+            connection.close()
+            return True
+        except Exception as e:
+            logging.error(f"Erreur de connexion à PostgreSQL : {e}")
+            return False
+
+    @task
+    def check_database():
+        try:
+            connection = psycopg2.connect(
+                host=POSTGRES_HOST,
+                port=POSTGRES_PORT,
+                user=POSTGRES_USER,
+                password=POSTGRES_PASSWORD,
+                dbname=POSTGRES_DB,
+            )
+            connection.autocommit = True
+            cursor = connection.cursor()
+            cursor.execute(f"SELECT 1 FROM pg_database WHERE datname = '{POSTGRES_DATATOURISME_DB}'")
+            exists = cursor.fetchone() is not None
+            cursor.close()
+            connection.close()
+            return exists
+        except Exception as e:
+            logging.error(f"Erreur lors de la vérification de la base de données : {e}")
+            return False
+
+    @task.branch
+    def decide_next_step(database_exists: bool):
+        if database_exists:
+            return "check_tables"
+        else:
+            return "create_database"
+
+    @task(task_id="create_database")
+    def create_database():
+        try:
+            connection = psycopg2.connect(
+                host=POSTGRES_HOST,
+                port=POSTGRES_PORT,
+                user=POSTGRES_USER,
+                password=POSTGRES_PASSWORD,
+                dbname=POSTGRES_DB,
+            )
+            connection.autocommit = True
+            cursor = connection.cursor()
+            cursor.execute(f"CREATE DATABASE {POSTGRES_DATATOURISME_DB}")
+            cursor.close()
+            connection.close()
+            logging.info("Base de données créée avec succès !")
+        except Exception as e:
+            logging.error(f"Erreur lors de la création de la base de données : {e}")
+
+    @task(task_id="check_tables", trigger_rule=TriggerRule.ONE_SUCCESS)
+    def check_tables():
+        try:
+            connection = psycopg2.connect(
+                host=POSTGRES_HOST,
+                port=POSTGRES_PORT,
+                user=POSTGRES_USER,
+                password=POSTGRES_PASSWORD,
+                dbname=POSTGRES_DATATOURISME_DB,
+            )
+            connection.autocommit = True
+            cursor = connection.cursor()
+
+            tables = ["point_of_interest", "category_point_of_interest", "category", "city", "departement", "region"]
+            existing_tables = []
+            for table in tables:
+                cursor.execute(f"SELECT 1 FROM information_schema.tables WHERE table_name = '{table}'")
+                if cursor.fetchone():
+                    existing_tables.append(table)
+
+            cursor.close()
+            connection.close()
+            return len(existing_tables) == len(tables)
+        except Exception as e:
+            logging.error(f"Erreur lors de la vérification des tables : {e}")
+            return False
+
+    @task.branch
+    def decide_table_creation(tables_exist: bool):
+        if tables_exist:
+            return "check_all_tables_available"
+        else:
+            return "create_tables"
+
+    @task(task_id="create_tables")
+    def create_tables():
+        try:
+            connection = psycopg2.connect(
+                host=POSTGRES_HOST,
+                port=POSTGRES_PORT,
+                user=POSTGRES_USER,
+                password=POSTGRES_PASSWORD,
+                dbname=POSTGRES_DATATOURISME_DB,
+            )
+            connection.autocommit = True
+            cursor = connection.cursor()
+            with open(f"{CUR_DIR}/sql/create_tables.sql", "r") as sql_file:
+                cursor.execute(sql_file.read())
+            cursor.close()
+            connection.close()
+            logging.info("Tables créées avec succès !")
+        except Exception as e:
+            logging.error(f"Erreur lors de la création des tables : {e}")
+
+    @task(task_id="download_archive")
+    def download_archive():
+        download_datatourisme_archive(url = URL_ARCHIVE)
+
+    @task(task_id="get_all_poi_metadata_task")
+    def get_all_poi_metadata_task():
+        zip_path = "./raw_archive/archive.zip"
+        redis_client = get_redis_client()
+        poi_metadata_list = get_all_poi_metadata(zip_path)
+        redis_key = f"metadata_{uuid.uuid4()}"
+        redis_client.set(redis_key, json.dumps([PoiMetadata.to_dict(metadata) for metadata in poi_metadata_list]))
+        return redis_key
+
+
+    @task
+    def get_all_poi(redis_key: str):
+        redis_client = get_redis_client()
+        metadata_data = json.loads(redis_client.get(redis_key))
+        poi_metadata_objects = [PoiMetadata.from_dict(item) for item in metadata_data]
+        pois = parse_poi_batch("./raw_archive/archive.zip", poi_metadata_objects)
+        redis_client.delete(redis_key)
+        redis_key = f"pois_{uuid.uuid4()}"
+        redis_client.set(redis_key, json.dumps([Poi.to_dict(poi) for poi in pois]))
+        return redis_key
+        
+
+    @task
+    def download_shape():
+        path_shape_file, path_to_delete = download_and_get_shapefile()
+        return path_shape_file
+
+
+    @task
+    def get_france_poi(redis_key, path_shape_file):
+        shape_geometry = get_france_geometry(path_shape_file)
+        redis_client = get_redis_client()
+        pois = json.loads(redis_client.get(redis_key))
+        pois = [Poi.from_dict(poi) for poi in pois]
+        pois = filter_poi_in_france(pois, shape_geometry)
+        redis_client.delete(redis_key)
+        redis_key = f"pois_{uuid.uuid4()}"
+        redis_client.set(redis_key, json.dumps([Poi.to_dict(poi) for poi in pois]))
+        return redis_key
+
+    @task(task_id="check_all_tables_available", trigger_rule=TriggerRule.ONE_SUCCESS, retries=3, retry_delay=datetime.timedelta(seconds=10))
+    def check_all_tables_available():
+        try:
+            connection = psycopg2.connect(
+                host=POSTGRES_HOST,
+                port=POSTGRES_PORT,
+                user=POSTGRES_USER,
+                password=POSTGRES_PASSWORD,
+                dbname=POSTGRES_DATATOURISME_DB,
+            )
+            cursor = connection.cursor()
+
+            # Liste des tables attendues
+            tables = ["point_of_interest", "category_point_of_interest", "category", "city", "departement", "region"]
+            missing_tables = []
+
+            # Vérification de la présence de chaque table
+            for table in tables:
+                cursor.execute(f"SELECT 1 FROM information_schema.tables WHERE table_name = '{table}'")
+                if not cursor.fetchone():
+                    missing_tables.append(table)
+
+            cursor.close()
+            connection.close()
+
+            if missing_tables:
+                logging.error(f"Les tables suivantes sont manquantes : {', '.join(missing_tables)}")
+                raise ValueError(f"Les tables suivantes sont manquantes : {', '.join(missing_tables)}")
+
+            logging.info("Toutes les tables sont disponibles.")
+            return True
+
+        except Exception as e:
+            logging.error(f"Erreur lors de la vérification des tables : {e}")
+            raise
+
+    @task(task_id="get_all_pois_from_db_task", trigger_rule=TriggerRule.ONE_SUCCESS)
+    def get_all_pois_from_db_task():
+        engine = connect_to_db_V2(host=POSTGRES_HOST,
+                port=POSTGRES_PORT,
+                user=POSTGRES_USER,
+                password=POSTGRES_PASSWORD,
+                dbname=POSTGRES_DATATOURISME_DB,)
+        db_pois = get_all_pois_from_db(engine)
+        redis_client = get_redis_client()
+        redis_key = f"pois_{uuid.uuid4()}"
+        redis_client.set(redis_key, json.dumps([Poi.to_dict(poi) for poi in db_pois]))
+        return redis_key
+
+    @task(task_id="compare_archive_pois_with_db")
+    def compare_archive_pois_with_db(pois_redis_key, db_pois_redis_key, **kwargs):
+        task_instance = kwargs['ti']
+        redis_client = get_redis_client()
+        
+        # Récupérer les POIs depuis Redis
+        pois_data = redis_client.get(pois_redis_key)
+        if not pois_data:
+            logging.error(f"Erreur : Les données pour {pois_redis_key} sont vides ou inexistantes.")
+            return
+
+        try:
+            pois = json.loads(pois_data)
+            pois = [Poi.from_dict(poi) for poi in pois]
+        except json.JSONDecodeError as e:
+            logging.error(f"Erreur lors de la désérialisation des POIs depuis Redis pour {pois_redis_key}: {str(e)}")
+            return
+
+        # Récupérer les POIs de la base de données depuis Redis
+        db_pois_data = redis_client.get(db_pois_redis_key)
+        if not db_pois_data:
+            logging.error(f"Erreur : Les données pour {db_pois_redis_key} sont vides ou inexistantes.")
+            return
+
+        try:
+            db_pois = json.loads(db_pois_data)
+            
+            # Vérifier si les données sont sous forme de liste, sinon loguer l'erreur
+            if not isinstance(db_pois, list):
+                logging.error(f"Erreur : Les données pour {db_pois_redis_key} ne sont pas une liste valide.")
+                return
+            
+            db_pois = [Poi.from_dict(poi) for poi in db_pois]
+        except json.JSONDecodeError as e:
+            logging.error(f"Erreur lors de la désérialisation des POIs de la base de données : {str(e)}")
+            return
+
+        redis_client.delete(db_pois_redis_key)
+
+        # Comparer les POIs de la base de données avec les POIs de l'archive
+        pois_to_create, pois_to_update = compare_pois(db_pois, pois)
+
+        # Enregistrer les POIs à créer et à mettre à jour dans Redis
+        redis_key_pois_to_create = f"pois_{uuid.uuid4()}"
+        redis_client.set(redis_key_pois_to_create, json.dumps([Poi.to_dict(poi) for poi in pois_to_create]))
+
+        redis_key_pois_to_update = f"pois_{uuid.uuid4()}"
+        redis_client.set(redis_key_pois_to_update, json.dumps([Poi.to_dict(poi) for poi in pois_to_update]))
+
+        # Sauvegarder les clés dans XCom pour le traitement suivant
+        task_instance.xcom_push(key="pois_to_create_key", value=redis_key_pois_to_create)
+        task_instance.xcom_push(key="pois_to_update_key", value=redis_key_pois_to_update)
+
+
+    @task
+    def create_batches(action, batch_size=10000, **kwargs):
+        task_instance = kwargs['ti']
+        if action == "insert":
+            redis_key = task_instance.xcom_pull(task_ids="compare_archive_pois_with_db", key="pois_to_create_key")
+        else:
+            redis_key = task_instance.xcom_pull(task_ids="compare_archive_pois_with_db", key="pois_to_update_key")
+        batch_keys = []
+        redis_client = get_redis_client()
+        redis_data = redis_client.get(redis_key)
+        if not redis_data:
+            logging.info(f"Aucun POI à {action} pour la clé Redis {redis_key}.")
+            return batch_keys
+        pois = json.loads(redis_client.get(redis_key))
+        redis_client.delete(redis_key)
+        pois = [Poi.from_dict(poi) for poi in pois]
+        batches = [pois[i:i + batch_size] for i in range(0, len(pois), batch_size)]
+        
+        
+
+        for batch in batches:
+            batch_key = f"batch_{uuid.uuid4()}"
+            redis_client.set(batch_key, json.dumps([Poi.to_dict(poi) for poi in batch]))
+            batch_keys.append(batch_key)
+
+        return batch_keys
+    
+    @task
+    def process_neo4j(redis_key):
+        redis_client = get_redis_client()
+        pois = json.loads(redis_client.get(redis_key))
+        pois = [Poi.from_dict(poi) for poi in pois]
+        driver = neo4j.GraphDatabase.driver(
+            NEO4J_URL,
+            auth=(NEO4J_USER, NEO4J_PASSWORD)
+        )
+        import_pois(driver, pois)
+        driver.close()
+
+
+    @task(task_id="process_batch_task", trigger_rule=TriggerRule.ALL_DONE)
+    def process_batch_task(action_dict: dict):
+        """
+        Traite un batch en fonction de la clé Redis et de l'action spécifiée.
+        
+        Args:
+            action_dict (dict): Dictionnaire contenant la clé du batch dans Redis et l'action à effectuer.
+                                Exemple : {"batch_key": "batch_123", "action": "insert"}
+        """
+        batch_key = action_dict["batch_key"]
+        action = action_dict["action"]
+
+        redis_client = get_redis_client()
+        try:
+            # Récupérer les données du batch depuis Redis
+            pois = json.loads(redis_client.get(batch_key))
+            pois = [Poi.from_dict(poi) for poi in pois]
+            
+            
+
+            # Appeler la fonction process_batch avec les POIs et l'action
+            process_batch(
+                pois,
+                type=action,
+                dbname=POSTGRES_DATATOURISME_DB,
+                user=POSTGRES_USER,
+                password=POSTGRES_PASSWORD,
+                host=POSTGRES_HOST,
+                port=POSTGRES_PORT,
+            )
+            logging.info(f"Batch {batch_key} traité avec succès (action : {action}).")
+
+            # Supprimer le batch de Redis après traitement
+            redis_client.delete(batch_key)
+        except Exception as e:
+            logging.error(f"Erreur lors du traitement du batch {batch_key} : {e}")
+            raise
+
+    @task
+    def cleanup_redis(keys: List[str]):
+        redis_client = get_redis_client()
+        for key in keys:
+            redis_client.delete(key)
+
+    @task
+    def prepare_action_list(batch_keys: List[str], action) -> List[dict]:
+        """
+        Prépare une liste de dictionnaires contenant les informations nécessaires pour chaque tâche batch.
+        
+        Args:
+            batch_keys (List[str]): Liste des clés Redis des batches.
+        
+        Returns:
+            List[dict]: Liste de dictionnaires contenant la clé du batch et l'action à effectuer.
+        """
+        return [{"batch_key": key, "action": action} for key in batch_keys]
+
+    # Orchestration dans le DAG
+    postgres_ready = check_postgres_service()
+    database_exists = check_database()
+    decide_next_step_task = decide_next_step(database_exists)
+    create_db = create_database()
+    tables_checked = check_tables()
+    table_decision = decide_table_creation(tables_checked)
+    create_tables_task = create_tables()
+    download_archive_task = download_archive()
+    get_all_poi_metadata_taski = get_all_poi_metadata_task()
+    get_all_pois_from_db_taski = get_all_pois_from_db_task()
+    get_all_poi_task = get_all_poi(get_all_poi_metadata_taski)
+    download_shape_task = download_shape()
+    get_france_poi_task = get_france_poi(get_all_poi_task, download_shape_task)
+    compare_archive_pois_with_db_task = compare_archive_pois_with_db(get_france_poi_task, get_all_pois_from_db_taski)
+    create_batches_task = create_batches("insert")
+    update_batches_task = create_batches("update")
+    create_action_list = prepare_action_list(create_batches_task, "insert")
+    update_action_list = prepare_action_list(update_batches_task, "update")
+    check_all_tables_available_task = check_all_tables_available()
+    process_neo4j_task = process_neo4j(get_france_poi_task)
+    # Utilisation de la tâche `expand`
+    create_process_batches = process_batch_task.expand(action_dict=create_action_list)
+    update_process_batches = process_batch_task.expand(action_dict=update_action_list)
+
+    create_cleanup_task = cleanup_redis(create_batches_task)
+    update_cleanup_task = cleanup_redis(update_batches_task)
+
+    # Dépendances
+    postgres_ready >> database_exists >> decide_next_step_task
+    decide_next_step_task >> create_db >> tables_checked
+    decide_next_step_task >> tables_checked
+
+    tables_checked >> table_decision
+    table_decision >> create_tables_task >> check_all_tables_available_task
+    table_decision >> check_all_tables_available_task
+    check_all_tables_available_task >> get_all_pois_from_db_taski
+
+    download_archive_task >> get_all_poi_metadata_taski
+    get_all_poi_metadata_taski >> get_all_poi_task
+    get_all_poi_task >> download_shape_task
+    download_shape_task >> get_france_poi_task
+    
+    get_france_poi_task >> [compare_archive_pois_with_db_task, process_neo4j_task]
+    get_all_pois_from_db_taski >> compare_archive_pois_with_db_task
+
+    [get_france_poi_task, get_all_pois_from_db_taski] >> compare_archive_pois_with_db_task
+
+    compare_archive_pois_with_db_task >> create_batches_task >> create_process_batches >> create_cleanup_task
+    compare_archive_pois_with_db_task >> update_batches_task >> update_process_batches >> update_cleanup_task

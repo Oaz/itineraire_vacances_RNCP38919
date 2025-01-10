@@ -4,6 +4,7 @@ import os
 import requests
 import zipfile
 import kagglehub
+import logging
 
 
 def check_file_exists(directory: str, filename: str) -> bool:
@@ -11,33 +12,53 @@ def check_file_exists(directory: str, filename: str) -> bool:
     return os.path.isfile(file_path)
 
 
-def download_datatourisme_archive() -> bool:
-    # Récupération des variables d'environnement définit dans le fichier .env
-    dotenv.load_dotenv()
+def download_datatourisme_archive(url) -> bool:
+    """
+    Télécharge l'archive ZIP depuis DataTourisme si elle n'existe pas déjà.
+
+    :return: bool - True si le fichier a été téléchargé avec succès, False sinon.
+    """
+
+    
     # Répertoire de stockage de l'archive ZIP brute
     download_path = "./raw_archive"
     os.makedirs(download_path, exist_ok=True)
     file_path = os.path.join(download_path, "archive.zip")
 
-    # Téléchargement du fichier ZIP depuis datatourisme
-    url = os.getenv("DATATOURISME_URL_FLUX") + os.getenv("DATATOURISME_API_KEY")
 
-    if not check_file_exists("./raw_archive", "archive.zip"):
+    # Vérification si le fichier existe déjà
+    if os.path.exists(file_path):
+        logging.info(f"Le fichier existe déjà : {file_path}. Téléchargement ignoré.")
+        return True
 
-        try:
-            response = requests.get(url, stream=True)
-            response.raise_for_status()  # Renvoi une exception si le code de statut de la réponse HTTP n'est pas 200
+    try:
+        logging.info(f"Téléchargement de l'archive depuis {url}...")
+        response = requests.get(url, stream=True, timeout=60)
+        response.raise_for_status()  # Vérifie les erreurs HTTP (404, 500, etc.)
 
-            # Sauvegarde du fichier ZIP
-            with open(file_path, "wb") as file:
-                for chunk in response.iter_content(chunk_size=8192):
-                    file.write(chunk)
-
-            return True
-        except requests.exceptions.RequestException as e:
+        # Vérification du type de contenu
+        content_type = response.headers.get('Content-Type')
+        if 'application/zip' not in content_type:
+            logging.error(f"Type de contenu inattendu : {content_type}")
             return False
-    else:
-        pass
+
+        # Sauvegarde du fichier ZIP
+        with open(file_path, "wb") as file:
+            for chunk in response.iter_content(chunk_size=8192):
+                file.write(chunk)
+
+        logging.info(f"Archive téléchargée avec succès et enregistrée sous : {file_path}.")
+        return True
+
+    except requests.exceptions.Timeout:
+        logging.error("Le téléchargement a expiré après 60 secondes.")
+        return False
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Erreur lors du téléchargement : {e}")
+        return False
+    except Exception as e:
+        logging.exception(f"Erreur inattendue lors du téléchargement : {e}")
+        return False
 
 
 def extract_data() -> bool:

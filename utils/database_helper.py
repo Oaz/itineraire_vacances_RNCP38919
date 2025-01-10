@@ -3,10 +3,12 @@ import json
 import utils.json_helper_functions as helper
 import dotenv
 import os
-from sqlalchemy import create_engine, inspect, Engine
+from sqlalchemy import create_engine, inspect
+from sqlalchemy.engine import Engine
 from typing import List
 import psycopg2
 from .point_of_interest_helper import Poi
+import logging
 
 # Chargement des variables d'environnement
 dotenv.load_dotenv()
@@ -134,17 +136,16 @@ def collect_all_categories(urls: list) -> pd.DataFrame:
     category_df = pd.DataFrame(categories, columns=["name"])
     return category_df
 
-def connect_to_db_V2():
+def connect_to_db_V2(dbname, user, password, host, port):
     """
     Crée une connexion à la base de données PostgreSQL.
     """
     return psycopg2.connect(
-        dbname=os.getenv('POSTGRES_DB'),
-        user=os.getenv('POSTGRES_USER'),
-        password=os.getenv('POSTGRES_PASSWORD'),
-        host=os.getenv('POSTGRES_HOST'),
-        port=os.getenv('POSTGRES_PORT')
-    )
+        dbname=dbname,
+        user=user,
+        password=password,
+        host=host,
+        port=port)
 
 def get_all_pois_from_db(conn) -> List[Poi]:
     """
@@ -193,6 +194,11 @@ def _pois_query(cursor) -> List[Poi]:
     # Extraire les informations
     poi_id, osm_node_id, name, rating, created_at, updated_at, latitude, longitude, postal_code, city = row
 
+    if isinstance(city, str):
+            try:
+                city = json.loads(city)  # Si c'est une chaîne JSON, la désérialiser
+            except json.JSONDecodeError:
+                city = None
     # Créer une instance de la classe Poi
     poi = Poi(
       id=poi_id,
@@ -337,7 +343,7 @@ def update_poi_in_db(conn, poi: Poi):
             )
         conn.commit()
 
-def process_batch(pois: List[Poi], type: str):
+def process_batch(pois: List[Poi], type: str, dbname, user, password, host, port):
     """
     Fonction pour mettre à jour/insérer créer un batch de POIs dans la base de données.
 
@@ -345,7 +351,7 @@ def process_batch(pois: List[Poi], type: str):
         pois (List[Poi]): Liste des POIs à mettre à jour/insérer.
         type (str): type d'action sur la base de donné "update" pour modifier et "insert" pour insérer
     """
-    engine = connect_to_db_V2()
+    engine = connect_to_db_V2(dbname, user, password, host, port)
     if type == "update":
         for poi in pois:
             update_poi_in_db(engine, poi)

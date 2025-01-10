@@ -4,7 +4,7 @@ import re
 import neo4j as neo4j
 import pandas as pd
 from pyproj import Transformer
-from utils.point_of_interest_helper import Poi
+from .point_of_interest_helper import Poi
 
 
 def connect_to_neo4j() -> neo4j.Driver:

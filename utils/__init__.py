@@ -7,7 +7,7 @@ from .neo4j_helper import connect_to_neo4j, import_pois, import_clusters, import
 from .point_of_interest_helper import Poi, PoiMetadata, Category, City, Departement, Region, compare_pois
 from .temporary_objects import object_store, object_read, object_delete
 
-# Liste des éléments accessibles via `from dt_utils import *`
+# Liste des éléments accessibles via `from utils import *`
 __all__ = [
     "check_file_exists",
     "download_datatourisme_archive",
