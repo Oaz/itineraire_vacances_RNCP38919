@@ -192,7 +192,6 @@ services:
 
   neo4j:
     image: neo4j:5
-    container_name: neo4j
     environment:
       NEO4J_AUTH: neo4j/my_password
     ports:
@@ -262,6 +261,17 @@ services:
     depends_on:
       - prometheus
     restart: always
+
+  dataviz:
+    build:
+      context: .
+      dockerfile: ./dataviz/Dockerfile
+    ports:
+      - "8050:8050"
+    environment:
+      NEO4J_URL: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: my_password
 
 volumes:
   postgres-db-volume:
