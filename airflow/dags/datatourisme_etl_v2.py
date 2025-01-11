@@ -13,6 +13,7 @@ from airflow.models import Variable
 from airflow.utils.trigger_rule import TriggerRule
 from utils import *
 import neo4j as neo4j
+from parts.neo4j_tasks import neo4j_placeholder
 
 # Variables Airflow
 CUR_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -579,3 +580,5 @@ with DAG(
 
     compare_archive_pois_with_db_task >> create_batches_task >> create_process_batches >> create_cleanup_task
     compare_archive_pois_with_db_task >> update_batches_task >> update_process_batches >> update_cleanup_task
+
+    process_neo4j_task >> neo4j_placeholder()
