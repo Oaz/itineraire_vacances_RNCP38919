@@ -163,7 +163,9 @@ with DAG(
 
     @task(task_id="download_archive")
     def download_archive():
-        download_datatourisme_archive(url = URL_ARCHIVE)
+        archive = download_datatourisme_archive(url = URL_ARCHIVE)
+        if not archive:
+            raise Exception("Erreur lors du téléchargement") 
 
     @task(task_id="get_all_poi_metadata_task")
     def get_all_poi_metadata_task():
