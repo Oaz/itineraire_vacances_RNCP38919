@@ -8,7 +8,6 @@ from sqlalchemy.engine import Engine
 from typing import List
 import psycopg2
 from .point_of_interest_helper import Poi
-import logging
 
 # Chargement des variables d'environnement
 dotenv.load_dotenv()

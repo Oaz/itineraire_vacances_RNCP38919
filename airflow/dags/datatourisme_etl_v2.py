@@ -29,6 +29,8 @@ URL_ARCHIVE = Variable.get("URL_ARCHIVE")
 NEO4J_USER = Variable.get("NEO4J_USER")
 NEO4J_PASSWORD = Variable.get("NEO4J_PASSWORD")
 NEO4J_URL = Variable.get("NEO4J_URL")
+DOWNLOAD_PATH = "./raw_archive"
+ZIP_PATH = "./raw_archive/archive.zip"
 
 def get_redis_client():
     """
@@ -45,7 +47,7 @@ with DAG(
     catchup=False,
 ) as dag:
 
-    @task
+    @task(task_id="check_postgres_service")
     def check_postgres_service() -> bool:
         """
         Vérification si il est possible de se connecter au service postgres
@@ -67,7 +69,7 @@ with DAG(
             logging.error(f"Erreur de connexion à PostgreSQL : {e}")
             return False
 
-    @task
+    @task(task_id="check_database")
     def check_database() -> bool:
         """
         Vérification si la base de donnée datatourisme est présente sur postgres
@@ -94,8 +96,8 @@ with DAG(
             logging.error(f"Erreur lors de la vérification de la base de données : {e}")
             return False
 
-    @task.branch
-    def decide_next_step(database_exists: bool) -> str:
+    @task.branch(task_id="decide_database_creation")
+    def decide_database_creation(database_exists: bool) -> str:
         """
         Décide de la prochaine étape:
             - Si la base de donnée datatourisme est présente sur postgres on passe à l'étape de vérification de la présence des tables dans la base de donnée
@@ -167,7 +169,7 @@ with DAG(
             logging.error(f"Erreur lors de la vérification des tables : {e}")
             return False
 
-    @task.branch
+    @task.branch(task_id="decide_table_creation")
     def decide_table_creation(tables_exist: bool) -> str:
         """
         Décide de la prochaine étape:
@@ -178,10 +180,10 @@ with DAG(
             tables_exist: bool - La tables sont présentes ou non
 
         :return: 
-            str - "get_all_pois_from_db_task" si les tables sont présentes dans la base de donnée, "create_tables" si les tables ne sont pas présentes dans la base de donnée
+            str - "check_all_tables_available" si les tables sont présentes dans la base de donnée, "create_tables" si les tables ne sont pas présentes dans la base de donnée
         """
         if tables_exist:
-            return "get_all_pois_from_db_task"
+            return "check_all_tables_available"
         else:
             return "create_tables"
 
@@ -213,28 +215,27 @@ with DAG(
         """
         Téléchargement de l'archive depuis datatourisme
         """
-        archive = download_datatourisme_archive(url = URL_ARCHIVE)
+        archive = download_datatourisme_archive(url = URL_ARCHIVE, download_path=DOWNLOAD_PATH)
         if not archive:
             raise
 
-    @task(task_id="récupération_des_metadata_des_pois")
-    def get_all_poi_metadata_task() -> str:
+    @task(task_id="get_all_poi_metadata_from_archive")
+    def get_all_poi_metadata_from_archive() -> str:
         """
         Récupération des métadata des Pois depuis l'archive datatourisme
 
         :return: 
             str - clé redis
         """
-        zip_path = "./raw_archive/archive.zip"
         redis_client = get_redis_client()
-        poi_metadata_list = get_all_poi_metadata(zip_path)
+        poi_metadata_list = get_all_poi_metadata(ZIP_PATH)
         redis_key = f"metadata_{uuid.uuid4()}"
         redis_client.set(redis_key, json.dumps([PoiMetadata.to_dict(metadata) for metadata in poi_metadata_list]))
         return redis_key
 
 
-    @task
-    def get_all_poi(metadata_redis_key: str) -> str:
+    @task(task_id="get_all_poi_from_archive")
+    def get_all_poi_from_archive(metadata_redis_key: str) -> str:
         """
         Récupération des Pois depuis l'archive datatourisme grace au metadata des Pois
 
@@ -247,43 +248,41 @@ with DAG(
         redis_client = get_redis_client()
         metadata_data = json.loads(redis_client.get(metadata_redis_key))
         poi_metadata_objects = [PoiMetadata.from_dict(item) for item in metadata_data]
-        pois = parse_poi_batch("./raw_archive/archive.zip", poi_metadata_objects)
-        redis_client.delete(metadata_redis_key)
+        pois = parse_poi_batch(ZIP_PATH, poi_metadata_objects)
         redis_key = f"pois_{uuid.uuid4()}"
         redis_client.set(redis_key, json.dumps([Poi.to_dict(poi) for poi in pois]))
         return redis_key
         
 
-    @task
-    def download_shape() -> str:
+    @task(task_id="download_shape")
+    def download_shape(**kwargs) -> None:
         """
         Téléchargment de la forme de la France
-
-        :return: 
-            str - chemin des fichiers de la forme de la france
         """
+        task_instance = kwargs['ti']
         path_shape_file, path_to_delete = download_and_get_shapefile()
-        return path_shape_file
+        task_instance.xcom_push(key="path_shape_file", value=path_shape_file)
+        task_instance.xcom_push(key="path_to_delete", value=path_to_delete)
 
 
-    @task
-    def get_france_poi(pois_redis_key: str, path_shape_file: str) -> str:
+    @task(task_id="get_france_poi")
+    def get_france_poi(pois_redis_key: str, **kwargs) -> str:
         """
         Récupération des Pois présent en France uniquement
 
         :param: 
             urls: pois_redis_key: str - clé redis des pois
-            path_shape_file: str - chemin des fichiers de la forme de la france
 
         :return: 
             str - clé redis des Pois en France
         """
+        task_instance = kwargs['ti']
+        path_shape_file = task_instance.xcom_pull(task_ids="download_shape", key="path_shape_file")
         shape_geometry = get_france_geometry(path_shape_file)
         redis_client = get_redis_client()
         pois = json.loads(redis_client.get(pois_redis_key))
         pois = [Poi.from_dict(poi) for poi in pois]
         pois = filter_poi_in_france(pois, shape_geometry)
-        redis_client.delete(pois_redis_key)
         redis_key = f"pois_{uuid.uuid4()}"
         redis_client.set(redis_key, json.dumps([Poi.to_dict(poi) for poi in pois]))
         return redis_key
@@ -327,8 +326,8 @@ with DAG(
             logging.error(f"Erreur lors de la vérification des tables : {e}")
             raise
 
-    @task(task_id="get_all_pois_from_db_task", trigger_rule=TriggerRule.ONE_SUCCESS)
-    def get_all_pois_from_db_task() -> str:
+    @task(task_id="get_all_poi_from_db")
+    def get_all_poi_from_db() -> str:
         """
         Récupération de tous les Pois depuis la base de donnée datatourisme
 
@@ -354,9 +353,6 @@ with DAG(
         :param: 
             pois_redis_key: str - clé redis des Pois de l'archive
             db_pois_redis_key: str - clé redis des Pois dans la base de donnée
-
-        :return: 
-            pd.DataFrame - Le DataFrame contenant les informations des points d'intérêt
         """
         task_instance = kwargs['ti']
         redis_client = get_redis_client()
@@ -393,11 +389,8 @@ with DAG(
             logging.error(f"Erreur lors de la désérialisation des POIs de la base de données : {str(e)}")
             return
 
-        redis_client.delete(db_pois_redis_key)
-
         # Comparer les POIs de la base de données avec les POIs de l'archive
         pois_to_create, pois_to_update = compare_pois(db_pois, pois)
-
         # Enregistrer les POIs à créer et à mettre à jour dans Redis
         redis_key_pois_to_create = f"pois_{uuid.uuid4()}"
         redis_client.set(redis_key_pois_to_create, json.dumps([Poi.to_dict(poi) for poi in pois_to_create]))
@@ -410,7 +403,7 @@ with DAG(
         task_instance.xcom_push(key="pois_to_update_key", value=redis_key_pois_to_update)
 
 
-    @task
+    @task(task_id="create_batches")
     def create_batches(action: str, batch_size: int=10000, **kwargs) -> List[str] :
         """
         Création des batch de Pois
@@ -434,7 +427,6 @@ with DAG(
             logging.info(f"Aucun POI à {action} pour la clé Redis {redis_key}.")
             return batch_keys
         pois = json.loads(redis_client.get(redis_key))
-        redis_client.delete(redis_key)
         pois = [Poi.from_dict(poi) for poi in pois]
         batches = [pois[i:i + batch_size] for i in range(0, len(pois), batch_size)]
         
@@ -447,7 +439,7 @@ with DAG(
 
         return batch_keys
     
-    @task
+    @task(task_id="process_neo4j")
     def process_neo4j(redis_key_pois: str) -> None:
         """
         Enregistrement des Pois dans neo4j
@@ -484,8 +476,6 @@ with DAG(
             pois = json.loads(redis_client.get(batch_key))
             pois = [Poi.from_dict(poi) for poi in pois]
             
-            
-
             # Appeler la fonction process_batch avec les POIs et l'action
             process_batch(
                 pois,
@@ -498,25 +488,51 @@ with DAG(
             )
             logging.info(f"Batch {batch_key} traité avec succès (action : {action}).")
 
-            # Supprimer le batch de Redis après traitement
-            redis_client.delete(batch_key)
         except Exception as e:
             logging.error(f"Erreur lors du traitement du batch {batch_key} : {e}")
             raise
 
-    @task
-    def cleanup_redis(keys: List[str]) -> None:
+    @task(task_id="cleanup_data", trigger_rule=TriggerRule.ALL_DONE)
+    def cleanup_data(metadata_redis_key: str, pois_redis_key: str, pois_in_france_redis_key: str, pois_db_redis_key: str, create_keys: List[str], update_keys: List[str], **kwargs) -> None:
         """
-        Néttoyage de redis
+        Néttoyage des données
 
         :param: 
-            keys: List[str] - La liste des clés redis
+            metadata_redis_key: str - La clé redis des metadata
+            pois_redis_key: str - La clé redis des Pois
+            pois_db_redis_key: str - La clé redis des Pois de la base de donnée
+            create_keys: List[str] - La liste des clés redis des batch de création
+            update_keys: List[str] - La liste des clés redis des batch de modification
         """
+        task_instance = kwargs['ti']
+        path_to_delete = task_instance.xcom_pull(task_ids="download_shape", key="path_to_delete")
+        pois_to_create_key = task_instance.xcom_pull(task_ids="compare_archive_pois_with_db", key="pois_to_create_key")
+        pois_to_update_key = task_instance.xcom_pull(task_ids="compare_archive_pois_with_db", key="pois_to_update_key")
         redis_client = get_redis_client()
-        for key in keys:
-            redis_client.delete(key)
+        if pois_to_create_key:
+            redis_client.delete(pois_to_create_key)
+        if pois_to_update_key:
+            redis_client.delete(pois_to_update_key)
+        if metadata_redis_key:
+            redis_client.delete(metadata_redis_key)
+        if pois_redis_key:
+            redis_client.delete(pois_redis_key)
+            pois_in_france_redis_key
+        if pois_in_france_redis_key:
+            redis_client.delete(pois_in_france_redis_key)
+        if pois_db_redis_key:
+            redis_client.delete(pois_db_redis_key)
+        if create_keys:
+            for key in create_keys:
+                redis_client.delete(key)
+        if update_keys:
+            for key in update_keys:
+                redis_client.delete(key)
+        if path_to_delete:
+            cleanup_downloaded_data(path_to_delete)
+        cleanup_downloaded_data(DOWNLOAD_PATH)
 
-    @task
+    @task(task_id="prepare_action_list")
     def prepare_action_list(batch_keys: List[str], action: str) -> List[dict]:
         """
         Prépare une liste de dictionnaires contenant les informations nécessaires pour chaque tâche batch.
@@ -533,18 +549,18 @@ with DAG(
     # Orchestration dans le DAG
     postgres_ready = check_postgres_service()
     database_exists = check_database()
-    decide_next_step_task = decide_next_step(database_exists)
+    decide_database_creation_task = decide_database_creation(database_exists)
     create_db = create_database()
     tables_checked = check_tables()
     table_decision = decide_table_creation(tables_checked)
     create_tables_task = create_tables()
     download_archive_task = download_archive()
-    get_all_poi_metadata_taski = get_all_poi_metadata_task()
-    get_all_pois_from_db_taski = get_all_pois_from_db_task()
-    get_all_poi_task = get_all_poi(get_all_poi_metadata_taski)
+    get_all_poi_metadata_from_archive_task = get_all_poi_metadata_from_archive()
+    get_all_poi_from_db_task = get_all_poi_from_db()
+    get_all_poi_from_archive_task = get_all_poi_from_archive(get_all_poi_metadata_from_archive_task)
     download_shape_task = download_shape()
-    get_france_poi_task = get_france_poi(get_all_poi_task, download_shape_task)
-    compare_archive_pois_with_db_task = compare_archive_pois_with_db(get_france_poi_task, get_all_pois_from_db_taski)
+    get_france_poi_task = get_france_poi(get_all_poi_from_archive_task)
+    compare_archive_pois_with_db_task = compare_archive_pois_with_db(get_france_poi_task, get_all_poi_from_db_task)
     create_batches_task = create_batches("insert")
     update_batches_task = create_batches("update")
     create_action_list = prepare_action_list(create_batches_task, "insert")
@@ -555,30 +571,29 @@ with DAG(
     create_process_batches = process_batch_task.expand(action_dict=create_action_list)
     update_process_batches = process_batch_task.expand(action_dict=update_action_list)
 
-    create_cleanup_task = cleanup_redis(create_batches_task)
-    update_cleanup_task = cleanup_redis(update_batches_task)
+    cleanup_data_task = cleanup_data(get_all_poi_metadata_from_archive_task, get_all_poi_from_archive_task, get_france_poi_task, get_all_poi_from_db_task, create_batches_task, update_batches_task)
 
     # Dépendances
-    postgres_ready >> database_exists >> decide_next_step_task
-    decide_next_step_task >> create_db >> tables_checked
-    decide_next_step_task >> tables_checked
+    postgres_ready >> database_exists >> decide_database_creation_task
+    decide_database_creation_task >> create_db >> tables_checked
+    decide_database_creation_task >> tables_checked
 
     tables_checked >> table_decision
     table_decision >> create_tables_task >> check_all_tables_available_task
-    table_decision >> get_all_pois_from_db_taski
-    check_all_tables_available_task >> get_all_pois_from_db_taski
+    table_decision >> check_all_tables_available_task
+    check_all_tables_available_task >> get_all_poi_from_db_task
 
-    download_archive_task >> get_all_poi_metadata_taski
-    get_all_poi_metadata_taski >> get_all_poi_task
-    get_all_poi_task >> download_shape_task
+    download_archive_task >> get_all_poi_metadata_from_archive_task
+    get_all_poi_metadata_from_archive_task >> get_all_poi_from_archive_task
+    get_all_poi_from_archive_task >> download_shape_task
     download_shape_task >> get_france_poi_task
     
     get_france_poi_task >> [compare_archive_pois_with_db_task, process_neo4j_task]
-    get_all_pois_from_db_taski >> compare_archive_pois_with_db_task
+    get_all_poi_from_db_task >> compare_archive_pois_with_db_task
 
-    [get_france_poi_task, get_all_pois_from_db_taski] >> compare_archive_pois_with_db_task
+    [get_france_poi_task, get_all_poi_from_db_task] >> compare_archive_pois_with_db_task
 
-    compare_archive_pois_with_db_task >> create_batches_task >> create_process_batches >> create_cleanup_task
-    compare_archive_pois_with_db_task >> update_batches_task >> update_process_batches >> update_cleanup_task
-
-    process_neo4j_task >> neo4j_placeholder()
+    compare_archive_pois_with_db_task >> create_batches_task >> create_process_batches >> cleanup_data_task
+    compare_archive_pois_with_db_task >> update_batches_task >> update_process_batches >> cleanup_data_task
+    process_neo4j_task >> neo4j_placeholder() >> cleanup_data_task
+    [create_process_batches, update_process_batches, process_neo4j_task] >> cleanup_data_task

@@ -377,30 +377,42 @@ def get_all_poi_metadata(zip_path) -> List[PoiMetadata]:
     """
     try:
         # Ouvrir l'archive ZIP
+        print(f"Ouverture de l'archive ZIP : {zip_path}")
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            # Lire `index.json` à la racine
+            # Vérifier la présence de `index.json`
+            if 'index.json' not in zip_ref.namelist():
+                raise KeyError("`index.json` introuvable dans l'archive ZIP.")
+
+            # Lire `index.json`
+            print("Lecture de `index.json`")
             with zip_ref.open('index.json') as index_file:
-                content = index_file.read().decode('utf-8')  # Lire et décoder le contenu
-                index_data = json.loads(content)  # Charger le JSON comme une liste d'objets
-                
-                # Créer une liste d'objets PoiMetadata
-                poi_metadata_list = [
-                    PoiMetadata(
-                        label=item['label'],
-                        last_update=item['lastUpdateDatatourisme'],
-                        file_path=item['file']
-                    )
-                    for item in index_data
-                ]
+                content = index_file.read().decode('utf-8')
+
+                # Charger et traiter les données JSON
+                index_data = json.loads(content)
+                poi_metadata_list = []
+                for item in index_data:
+                    # Vérifier les clés dans chaque objet
+                    if not all(key in item for key in ['label', 'lastUpdateDatatourisme', 'file']):
+                        print(f"Erreur : Clés manquantes dans l'objet JSON : {item}")          
+                    # Ajouter à la liste des POIs
+                    else:
+                        poi_metadata_list.append(
+                            PoiMetadata(
+                                label=item['label'],
+                                last_update=item['lastUpdateDatatourisme'],
+                                file_path=item['file']
+                            )
+                        )
 
                 return poi_metadata_list
 
-    except KeyError:
-        print(f"Erreur : `index.json` introuvable dans l'archive.")
-    except json.JSONDecodeError:
-        print(f"Erreur : `index.json` n'est pas un JSON valide.")
-    except Exception as e:
+    except KeyError as e:
         print(f"Erreur : {str(e)}")
+    except json.JSONDecodeError as e:
+        print(f"Erreur : Problème de parsing JSON - {str(e)}")
+    except Exception as e:
+        print(f"Erreur inattendue : {str(e)}")
         return []
     
 def get_france_geometry(shp_path: str) -> gpd.GeoDataFrame:

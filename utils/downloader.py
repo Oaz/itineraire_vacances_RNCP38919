@@ -12,16 +12,12 @@ def check_file_exists(directory: str, filename: str) -> bool:
     return os.path.isfile(file_path)
 
 
-def download_datatourisme_archive(url) -> bool:
+def download_datatourisme_archive(url, download_path) -> bool:
     """
     Télécharge l'archive ZIP depuis DataTourisme si elle n'existe pas déjà.
 
     :return: bool - True si le fichier a été téléchargé avec succès, False sinon.
     """
-
-    
-    # Répertoire de stockage de l'archive ZIP brute
-    download_path = "./raw_archive"
     os.makedirs(download_path, exist_ok=True)
     file_path = os.path.join(download_path, "archive.zip")
 
