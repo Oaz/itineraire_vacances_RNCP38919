@@ -146,6 +146,17 @@ def connect_to_db_V2(dbname, user, password, host, port):
         host=host,
         port=port)
 
+def connect_to_db_from_env():
+    """
+    Crée une connexion à la base de données PostgreSQL.
+    """
+    return psycopg2.connect(
+        dbname=os.environ["POSTGRES_DB"],
+        user=os.environ["POSTGRES_USER"],
+        password=os.environ["POSTGRES_PASSWORD"],
+        host=os.environ["POSTGRES_HOST"],
+        port=os.environ["POSTGRES_PORT"])
+
 def get_all_pois_from_db(conn) -> List[Poi]:
     """
     Récupère tous les POIs de la base de données.

@@ -13,7 +13,7 @@ from airflow.models import Variable
 from airflow.utils.trigger_rule import TriggerRule
 from utils import *
 import neo4j as neo4j
-from parts.neo4j_tasks import neo4j_placeholder
+from parts.clusters import create_cluster_tasks
 
 # Variables Airflow
 CUR_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -475,7 +475,7 @@ with DAG(
             # Récupérer les données du batch depuis Redis
             pois = json.loads(redis_client.get(batch_key))
             pois = [Poi.from_dict(poi) for poi in pois]
-            
+
             # Appeler la fonction process_batch avec les POIs et l'action
             process_batch(
                 pois,
@@ -595,5 +595,10 @@ with DAG(
 
     compare_archive_pois_with_db_task >> create_batches_task >> create_process_batches >> cleanup_data_task
     compare_archive_pois_with_db_task >> update_batches_task >> update_process_batches >> cleanup_data_task
-    process_neo4j_task >> neo4j_placeholder() >> cleanup_data_task
+    process_neo4j_task >> cleanup_data_task
     [create_process_batches, update_process_batches, process_neo4j_task] >> cleanup_data_task
+
+    clusters_tasks = create_cluster_tasks()
+    process_neo4j_task >> clusters_tasks
+    create_process_batches >> clusters_tasks
+    update_process_batches >> clusters_tasks

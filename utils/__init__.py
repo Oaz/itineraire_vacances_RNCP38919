@@ -1,5 +1,5 @@
 from .downloader import check_file_exists, download_datatourisme_archive, extract_data, download_datatourisme_categories, download_and_get_shapefile, cleanup_downloaded_data
-from .database_helper import connect_to_db, show_tables, save_dataframe_to_postgres, parse_index_datatourisme, collect_region_information_from_files, collect_department_information_from_files, collect_city_information_from_files, collect_all_categories, connect_to_db_V2, get_all_pois_from_db, add_poi_to_db, update_poi_in_db, process_batch
+from .database_helper import connect_to_db, show_tables, save_dataframe_to_postgres, parse_index_datatourisme, collect_region_information_from_files, collect_department_information_from_files, collect_city_information_from_files, collect_all_categories, connect_to_db_V2, connect_to_db_from_env, get_all_pois_from_db, select_pois_from_db, add_poi_to_db, update_poi_in_db, process_batch
 from .geo_clustering import compute_xy, GeoClustering
 from .geo_routing import GeoRouting
 from .json_helper_functions import get_poi_identifier, get_poi_name, get_poi_creation_date, get_poi_update_date, find_last_update_by_label, get_poi_category, category_cleanup, get_poi_region, get_poi_department, get_poi_city, get_poi_postal_code, get_poi_coordinates, parse_poi_from_json, get_all_poi, get_all_poi_metadata, get_france_geometry, filter_poi_in_france, parse_poi_batch, get_all_poi_parallel
@@ -22,7 +22,9 @@ __all__ = [
     "collect_city_information_from_files",
     "collect_all_categories",
     "connect_to_db_V2",
+    "connect_to_db_from_env",
     "get_all_pois_from_db",
+    "select_pois_from_db",
     "add_poi_to_db",
     "update_poi_in_db",
     "process_batch",

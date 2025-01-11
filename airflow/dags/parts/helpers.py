@@ -12,16 +12,9 @@ def inject_vars_into_env(*var_names):
   def decorator(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-      if var_names:
-        for var_name in var_names:
-          value = Variable.get(var_name)
-          os.environ[var_name] = value
-          print(f"Injected {var_name} into environment with value {value}")
-      else:
-        variables = Variable.get_all()
-        for key, value in variables.items():
-          os.environ[key] = value
-          print(f"Injected {key} into environment with value {value}")
+      for var_name in var_names:
+        value = Variable.get(var_name)
+        os.environ[var_name] = value
       return func(*args, **kwargs)
 
     return wrapper

@@ -16,7 +16,7 @@ class TestDatabase(unittest.TestCase):
     os.environ["POSTGRES_DB"] = self.postgres_container.dbname
     os.environ["POSTGRES_PORT"] = self.postgres_container.get_exposed_port(5432)
     os.environ["POSTGRES_HOST"] = self.postgres_container.get_container_host_ip()
-    self.engine = dh.connect_to_db_V2()
+    self.engine = dh.connect_to_db_from_env()
 
   def tearDown(self):
     self.postgres_container.stop()
