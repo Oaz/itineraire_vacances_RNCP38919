@@ -202,6 +202,11 @@ services:
     volumes:
       - neo4j_data:/data
       - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD", "sh", "-c", "echo 'RETURN 1;' | cypher-shell -u neo4j -p my_password"]
+      interval: 5s
+      retries: 10
+      start_period: 10s
 
   webserver:
     <<: *airflow-common
@@ -265,6 +270,9 @@ services:
     ports:
       - "8050:8050"
     <<: *shared-environment
+    depends_on:
+      neo4j:
+        condition: service_healthy
 
 
 volumes:
