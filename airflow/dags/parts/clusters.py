@@ -44,7 +44,7 @@ cluster_definitions = [
 ]
 
 
-@task
+@task(pool="clusters_pool")
 @inject_vars_into_env(
   'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_HOST', 'POSTGRES_PORT', 'POSTGRES_DATATOURISME_DB',
   'NEO4J_USER', 'NEO4J_PASSWORD', 'NEO4J_URL'
@@ -68,6 +68,7 @@ def create_cluster(definition: ClusterDefinition):
     routes = routing.edges
     print(f'Computed {len(routes)} routes between clusters for category {definition.category}')
     with connect_to_neo4j() as n4j_conn:
+      print(f'Starting import of clusters and routes into neo4j')
       import_clusters(n4j_conn, definition.category, df_clusters, df_vicinities)
       print(f'Import of clusters into neo4j is complete')
       import_routes(n4j_conn, definition.category, routes)

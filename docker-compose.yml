@@ -170,7 +170,8 @@ services:
         airflow variables set URL_ARCHIVE 'https://diffuseur.datatourisme.fr/webservice/af0fdc3a146b7f643ab3fb9c2ba334ad/6e97d53f-f931-49ca-8d17-e1327461eecf' &&
         airflow variables set NEO4J_USER 'neo4j' &&
         airflow variables set NEO4J_PASSWORD 'my_password' &&
-        airflow variables set NEO4J_URL 'bolt://neo4j:7687'
+        airflow variables set NEO4J_URL 'bolt://neo4j:7687' &&
+        airflow pools set clusters_pool 1 "Clusters Creation Pool"
       "
 
     environment:
