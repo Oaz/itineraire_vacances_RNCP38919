@@ -1,5 +1,3 @@
-import os
-import sys
 from collections import defaultdict
 import pandas as pd
 from utils import connect_to_neo4j
@@ -10,9 +8,18 @@ import plotly.graph_objects as go
 def load_categories():
   with connect_to_neo4j() as driver:
     with driver.session() as session:
-      result = session.run("MATCH (c:Cluster) RETURN DISTINCT c.category")
-      categories = [r["c.category"] for r in result]
-      return [{'label': category, 'value': category} for category in sorted(categories)]
+      result = session.run('''
+      MATCH (c:Cluster)
+      WITH c.category AS category, COUNT(c) AS clusterCount
+      MATCH (c)-[r:ROUTE]->(c2)
+      WHERE c.category = c2.category AND c.category = category
+      RETURN category, clusterCount, COUNT(r) AS routeCount
+      ''')
+      categories = [(r['category'], r['clusterCount'], r['routeCount']) for r in result]
+      return [
+        {'label': f'{category} ({clusterCount} clusters, {routeCount} routes)', 'value': category}
+        for category, clusterCount, routeCount in sorted(categories)
+      ]
 
 
 page_layout = html.Div([
