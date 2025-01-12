@@ -24,10 +24,10 @@ cluster_definitions = [
     category='CulturalEvent', min_cluster_size=5, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
   ),
   ClusterDefinition(
-    category='SportsAndLeisurePlace', min_cluster_size=5, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
+    category='SportsAndLeisurePlace', min_cluster_size=10, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
   ),
   ClusterDefinition(
-    category='EntertainmentAndEvent', min_cluster_size=5, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
+    category='EntertainmentAndEvent', min_cluster_size=10, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
   ),
   ClusterDefinition(
     category='WalkingTour', min_cluster_size=5, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
@@ -36,10 +36,10 @@ cluster_definitions = [
     category='SportsEvent', min_cluster_size=5, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
   ),
   ClusterDefinition(
-    category='Museum', min_cluster_size=5, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
+    category='Museum', min_cluster_size=3, expand_threshold=15000, edge_threshold=150000, shortcut_factor=3
   ),
   ClusterDefinition(
-    category='ThemePark', min_cluster_size=5, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
+    category='ThemePark', min_cluster_size=2, expand_threshold=5000, edge_threshold=150000, shortcut_factor=3
   ),
 ]
 
