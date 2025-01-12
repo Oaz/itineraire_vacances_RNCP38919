@@ -42,7 +42,10 @@ def import_pois(driver: neo4j.Driver, pois: List[Poi]):
   :return:
   '''
   with driver.session() as session:
-    session.run("CREATE INDEX IF NOT EXISTS FOR (poi:POI) ON (poi.id)")
+    try:
+      session.run("CREATE INDEX IF NOT EXISTS FOR (poi:POI) ON (poi.id)")
+    except Exception as e:
+      print('Ignoring Exception', e)
     session.run("""
             UNWIND $pois AS poi
             MERGE (p:POI {id: poi.id})
@@ -80,7 +83,10 @@ def import_clusters(driver: neo4j.Driver, category: str, df_clusters: pd.DataFra
   ]
   vicinities = df_vicinities.to_dict(orient="records")
   with driver.session() as session:
-    session.run("CREATE INDEX IF NOT EXISTS FOR (cluster:Cluster) ON (cluster.category)")
+    try:
+      session.run("CREATE INDEX IF NOT EXISTS FOR (cluster:Cluster) ON (cluster.category)")
+    except Exception as e:
+      print('Ignoring Exception', e)
     session.run("MATCH (cluster:Cluster {category: $category}) DETACH DELETE cluster", category=category)
     session.run("UNWIND $clusters AS cluster CREATE (c:Cluster) SET c = cluster", clusters=clusters)
     session.run("""
