@@ -598,7 +598,4 @@ with DAG(
     process_neo4j_task >> cleanup_data_task
     [create_process_batches, update_process_batches, process_neo4j_task] >> cleanup_data_task
 
-    clusters_tasks = create_cluster_tasks()
-    process_neo4j_task >> clusters_tasks
-    create_process_batches >> clusters_tasks
-    update_process_batches >> clusters_tasks
+    cleanup_data_task >> create_cluster_tasks()
