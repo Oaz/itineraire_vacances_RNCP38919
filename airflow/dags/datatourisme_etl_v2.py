@@ -45,6 +45,7 @@ with DAG(
     schedule_interval=timedelta(days=1),
     start_date=datetime.datetime(2024, 12, 8),
     catchup=False,
+    max_active_runs=1,
 ) as dag:
 
     @task(task_id="check_postgres_service")
