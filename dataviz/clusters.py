@@ -5,7 +5,11 @@ from dash import dcc, html, Input, Output, callback
 import plotly.graph_objects as go
 
 
-def load_categories():
+@callback(
+  Output('clusters-category', 'options'),
+  Input('reload-button', 'n_clicks'),
+)
+def update_dropdown(n_clicks):
   with connect_to_neo4j() as driver:
     with driver.session() as session:
       result = session.run('''
@@ -24,9 +28,10 @@ def load_categories():
 
 page_layout = html.Div([
   html.H1("Clusters"),
+  html.Button("Reload", id="reload-button", n_clicks=0),
   dcc.Dropdown(
     id='clusters-category',
-    options=load_categories(),
+    options=[],
     value=''
   ),
   dcc.Graph(id='clusters-map'),
