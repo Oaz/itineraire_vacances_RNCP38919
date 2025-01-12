@@ -11,6 +11,7 @@ from airflow import DAG
 from airflow.decorators import task
 from airflow.models import Variable
 from airflow.utils.trigger_rule import TriggerRule
+from airflow.utils.dates import days_ago
 from utils import *
 import neo4j as neo4j
 from parts.clusters import create_cluster_tasks
@@ -43,7 +44,8 @@ with DAG(
     "datatourisme_etl_v2",
     description="ETL DataTourisme avec Redis, PostgreSQL, et traitement par lots dynamiques",
     schedule_interval=timedelta(days=1),
-    start_date=datetime.datetime(2024, 12, 8),
+    start_date=days_ago(2),
+    #start_date=datetime.datetime(2024, 12, 8),
     catchup=False,
     max_active_runs=1,
 ) as dag:
