@@ -275,6 +275,12 @@ services:
       neo4j:
         condition: service_healthy
 
+  api:
+    build:
+      context: .
+      dockerfile: ./api/Dockerfile
+    ports:
+      - "5000:5000"
 
 volumes:
   postgres-db-volume:
