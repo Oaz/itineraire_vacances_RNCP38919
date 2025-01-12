@@ -24,6 +24,17 @@
 # Feel free to modify this file to suit your needs.
 ---
 
+x-shared-environment: &shared-environment
+  environment:
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: 5432
+    POSTGRES_USER: airflow
+    POSTGRES_PASSWORD: airflow
+    POSTGRES_DB: datatourisme
+    NEO4J_URL: bolt://neo4j:7687
+    NEO4J_USER: neo4j
+    NEO4J_PASSWORD: my_password
+
 x-airflow-common: &airflow-common
   image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.10.4-python3.10}
   environment: 
@@ -253,10 +264,8 @@ services:
       dockerfile: ./dataviz/Dockerfile
     ports:
       - "8050:8050"
-    environment:
-      NEO4J_URL: bolt://neo4j:7687
-      NEO4J_USER: neo4j
-      NEO4J_PASSWORD: my_password
+    <<: *shared-environment
+
 
 volumes:
   postgres-db-volume:

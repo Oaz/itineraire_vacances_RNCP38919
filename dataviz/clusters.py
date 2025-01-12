@@ -2,30 +2,29 @@ import os
 import sys
 from collections import defaultdict
 import pandas as pd
-import utils.neo4j_helper as nh
+from utils import connect_to_neo4j
 from dash import dcc, html, Input, Output, callback
 import plotly.graph_objects as go
 
-os.environ["NEO4J_URL"] = 'bolt://neo4j:7687'
-os.environ["NEO4J_USER"] = 'neo4j'
-os.environ["NEO4J_PASSWORD"] = 'my_password'
+
+def load_categories():
+  with connect_to_neo4j() as driver:
+    with driver.session() as session:
+      result = session.run("MATCH (c:Cluster) RETURN DISTINCT c.category")
+      categories = [r["c.category"] for r in result]
+      return [{'label': category, 'value': category} for category in sorted(categories)]
+
 
 page_layout = html.Div([
   html.H1("Clusters"),
   dcc.Dropdown(
     id='clusters-category',
-    options=[
-      {'label': 'CulturalSite', 'value': 'CulturalSite'},
-      {'label': 'CulturalEvent', 'value': 'CulturalEvent'},
-      {'label': 'LeisureComplex', 'value': 'LeisureComplex'},
-      {'label': 'SelfCateringAccommodation', 'value': 'SelfCateringAccommodation'},
-      {'label': 'SportsAndLeisurePlace', 'value': 'SportsAndLeisurePlace'},
-      {'label': 'ThemePark', 'value': 'ThemePark'},
-    ],
+    options=load_categories(),
     value=''
   ),
   dcc.Graph(id='clusters-map'),
 ])
+
 
 @callback(
   Output('clusters-map', 'figure'),
@@ -105,7 +104,7 @@ def draw_routes(fig, routes):
 
 
 def load_clusters_from_neo4j(category):
-  with nh.connect_to_neo4j() as driver:
+  with connect_to_neo4j() as driver:
     with driver.session() as session:
       result = session.run(
         "MATCH (c:Cluster {category:$category}) RETURN c",
@@ -129,7 +128,7 @@ def load_clusters_from_neo4j(category):
 
 
 def load_routes_from_neo4j(category):
-  with nh.connect_to_neo4j() as driver:
+  with connect_to_neo4j() as driver:
     with driver.session() as session:
       result = session.run(
         """
