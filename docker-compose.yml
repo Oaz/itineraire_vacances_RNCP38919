@@ -282,6 +282,12 @@ services:
       dockerfile: ./api/Dockerfile
     ports:
       - "5000:5000"
+    <<: *shared-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
 
 volumes:
   postgres-db-volume:

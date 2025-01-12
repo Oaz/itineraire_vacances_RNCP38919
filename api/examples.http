@@ -1,0 +1,10 @@
+@TheApiAddress = http://127.0.0.1:5000
+
+### DB health
+GET {{TheApiAddress}}/db_health
+
+### Total number of POIs in the DB
+GET {{TheApiAddress}}/count_poi
+
+### Total number of POIs in the DB
+GET {{TheApiAddress}}/clustered_categories
