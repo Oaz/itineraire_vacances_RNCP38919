@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POI Route Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>POI Route Demo</h1>
+
+    <!-- Input Form -->
+    <form id="routeForm">
+        <label for="startCity">Start City:</label>
+        <input type="text" id="startCity" name="startCity" required>
+        <br><br>
+        <label for="endCity">End City:</label>
+        <input type="text" id="endCity" name="endCity" required>
+        <br><br>
+        <label for="category">Category:</label>
+        <input type="text" id="category" name="category" required>
+        <br><br>
+        <button type="submit">Get Route</button>
+    </form>
+
+    <!-- Results -->
+    <h2>Route Details</h2>
+    <pre id="routeResult"></pre>
+
+    <script>
+        async function submitForm(event) {
+            event.preventDefault();
+
+            // Get form inputs
+            const startCity = document.getElementById('startCity').value;
+            const endCity = document.getElementById('endCity').value;
+            const category = document.getElementById('category').value;
+
+            // Clear previous results
+            document.getElementById('routeResult').textContent = 'Loading...';
+
+            try {
+                // Step 1: Find POI IDs for start and end cities
+                const startPoiResponse = await fetch('/find_poi', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ city: startCity, category })
+                });
+                const startPoiId = await startPoiResponse.json();
+                console.log(startPoiId);
+
+                const endPoiResponse = await fetch('/find_poi', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ city: endCity, category })
+                });
+                const endPoiId = await endPoiResponse.json();
+                console.log(endPoiId);
+
+                // Step 2: Get route between the two POIs
+                const routeResponse = await fetch('/route', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ start_poi_id: startPoiId, end_poi_id: endPoiId, category })
+                });
+                const route = await routeResponse.json();
+                console.log(route);
+
+                // Step 3: Get POI details for each POI in the route
+                let result = 'Route:\n';
+                for (const area of route) {
+                    result += `Area:\n`;
+                    for (const poiId of area) {
+                        const poiResponse = await fetch(`/poi?id=${poiId}`);
+                        const poiData = await poiResponse.json();
+                        result += `- POI ID: ${poiId}\n  Name: ${poiData.name}\n  City: ${poiData.city}\n  Postal Code: ${poiData.postal_code}\n\n`;
+                    }
+                }
+
+                // Display results
+                document.getElementById('routeResult').textContent = result;
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('routeResult').textContent = 'An error occurred. Please check the console for details.';
+            }
+        }
+
+        // Attach form submission handler
+        document.getElementById('routeForm').addEventListener('submit', submitForm);
+    </script>
+</body>
+</html>
