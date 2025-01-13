@@ -91,9 +91,9 @@ def import_clusters(driver: neo4j.Driver, category: str, df_clusters: pd.DataFra
     session.run("UNWIND $clusters AS cluster CREATE (c:Cluster) SET c = cluster", clusters=clusters)
     session.run("""
         UNWIND $vicinities AS v
-        MATCH (c:Cluster {id: v.cluster}), (p:POI {id: v.id})
+        MATCH (c:Cluster {id: v.cluster, category: $category}), (p:POI {id: v.id})
         CREATE (c)-[:VICINITY]->(p)
-    """, vicinities=vicinities)
+    """, vicinities=vicinities, category=category)
 
 
 def import_routes(driver: neo4j.Driver, category: str, routes: Dict[Tuple[int, int], int]):
