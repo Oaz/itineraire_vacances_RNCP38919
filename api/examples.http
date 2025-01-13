@@ -11,7 +11,26 @@ GET {{TheApiAddress}}/count_poi
 ### List of categories with clusters
 GET {{TheApiAddress}}/clustered_categories
 
+### Find a POI for given city and category
+POST {{TheApiAddress}}/find_poi
+Content-Type: application/json
+
+{
+  "city": "Strasbourg",
+  "category": "Museum"
+}
+
+### Find a POI for given city and category
+POST {{TheApiAddress}}/find_poi
+Content-Type: application/json
+
+{
+  "city": "Colmar",
+  "category": "Museum"
+}
+
 ### Get route between 2 POIs for given category
+### This route goes from a museum in Strasbourg to another museum in Colmar and proposes other museums along the way
 POST {{TheApiAddress}}/route
 Content-Type: application/json
 
@@ -21,6 +40,5 @@ Content-Type: application/json
   "category": "Museum"
 }
 
-
-
-
+### Get POI details
+GET {{TheApiAddress}}/poi?id=223013436
