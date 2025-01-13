@@ -11,6 +11,8 @@
     <!-- Leaflet Awesome Markers CSS -->
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <!-- jQuery UI CSS -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -28,6 +30,12 @@
             margin-top: 20px;
             border-radius: 5px;
         }
+
+        .ui-autocomplete {
+            max-height: 200px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
     </style>
 </head>
 <body>
@@ -35,14 +43,16 @@
 
 <!-- Input Form -->
 <form id="routeForm">
+    <label for="category">Category:</label>
+    <select id="category" name="category" required>
+        <option value="">Loading categories...</option>
+    </select>
+    <br><br>
     <label for="startCity">Start City:</label>
-    <input type="text" id="startCity" name="startCity" required>
+    <input type="text" id="startCity" name="startCity" placeholder="Start typing a city..." required>
     <br><br>
     <label for="endCity">End City:</label>
-    <input type="text" id="endCity" name="endCity" required>
-    <br><br>
-    <label for="category">Category:</label>
-    <input type="text" id="category" name="category" required>
+    <input type="text" id="endCity" name="endCity" placeholder="Start typing a city..." required>
     <br><br>
     <button type="submit">Get Route</button>
 </form>
@@ -55,6 +65,10 @@
 <h2>Route Map</h2>
 <div id="map"></div>
 
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<!-- jQuery UI -->
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <!-- Leaflet JavaScript -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
@@ -76,6 +90,77 @@
         'pink', 'darkblue', 'darkgreen', 'lightblue', 'lightgreen', 'lightred',
         'beige', 'black', 'white', 'gray', 'darkpurple', 'lightgray'
     ];
+
+    // Fetch categories and populate the dropdown
+    async function fetchCategories() {
+        try {
+            const response = await fetch('/clustered_categories');
+            const categories = await response.json();
+            const categoryDropdown = document.getElementById('category');
+
+            // Clear the loading message
+            categoryDropdown.innerHTML = '';
+
+            // Add each category as an option
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.category;
+                option.textContent = `${cat.category} (${cat.clusterCount} clusters, ${cat.routeCount} routes)`;
+                categoryDropdown.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+            document.getElementById('category').innerHTML = '<option value="">Failed to load categories</option>';
+        }
+    }
+
+    // Initialize autocomplete for city inputs
+    function initializeAutocomplete() {
+        $("#startCity, #endCity").autocomplete({
+            source: async function (request, response) {
+                const category = document.getElementById('category').value;
+                if (!category) {
+                    response([]); // No suggestions if no category is selected
+                    return;
+                }
+                // Show loading indicator
+                $(this).addClass('ui-autocomplete-loading');
+                try {
+                    const res = await fetch('/find_cities', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({category, query: request.term})
+                    });
+                    if (!res.ok) {
+                        throw new Error('Failed to fetch cities');
+                    }
+                    const cities = await res.json();
+                    // Transform the response into the format expected by autocomplete
+                    const suggestions = cities.map(city => ({
+                        label: city, // Displayed in the dropdown
+                        value: city   // Inserted into the input field
+                    }));
+                    response(suggestions);
+                } catch (error) {
+                    console.error('Error fetching cities:', error);
+                    response([{label: 'Error loading cities. Please try again.', value: null}]);
+                } finally {
+                    // Hide loading indicator
+                    $(this).removeClass('ui-autocomplete-loading');
+                }
+            },
+            minLength: 3, // Start suggesting after 3 characters
+        });
+    }
+
+    // Clear city inputs when category changes
+    document.getElementById('category').addEventListener('change', function () {
+        document.getElementById('startCity').value = '';
+        document.getElementById('endCity').value = '';
+    });
+
+    // Fetch categories and initialize autocomplete when the page loads
+    fetchCategories().then(initializeAutocomplete);
 
     async function submitForm(event) {
         event.preventDefault();

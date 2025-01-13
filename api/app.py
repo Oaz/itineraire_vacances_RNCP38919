@@ -83,9 +83,29 @@ async def get_route(request: RouteRequest):
   return await rr.get_route(request.start_poi_id, request.end_poi_id, request.category)
 
 
+class FindCityRequest(BaseModel):
+  category: str
+  query: str
+
+
+@app.post("/find_cities")
+async def find_poi(request: FindCityRequest):
+  with connect_to_db_from_env() as conn:
+    cursor = conn.cursor()
+    cursor.execute("""
+    SELECT DISTINCT city.name FROM Point_Of_Interest AS poi
+    LEFT JOIN category_point_of_interest cpoi on poi.dt_poi_id = cpoi.dt_poi_id
+    LEFT JOIN category on cpoi.dt_category_id = category.dt_category_id
+    LEFT JOIN city on poi.dt_city_id = city.dt_city_id
+    WHERE city.name LIKE %s and category.name=%s
+""", (f'{request.query}%', request.category))
+    return [city for row in cursor.fetchall() for city in row]
+
+
 class FindPoiRequest(BaseModel):
   city: str
   category: str
+
 
 @app.post("/find_poi")
 async def find_poi(request: FindPoiRequest):

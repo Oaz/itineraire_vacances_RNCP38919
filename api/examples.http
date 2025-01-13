@@ -11,6 +11,15 @@ GET {{TheApiAddress}}/count_poi
 ### List of categories with clusters
 GET {{TheApiAddress}}/clustered_categories
 
+### Find cities in a category
+POST {{TheApiAddress}}/find_cities
+Content-Type: application/json
+
+{
+  "query": "Castel",
+  "category": "Castle"
+}
+
 ### Find a POI for given city and category
 POST {{TheApiAddress}}/find_poi
 Content-Type: application/json
