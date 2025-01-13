@@ -12,6 +12,8 @@
 **/*.zip
 **/data
 **/*.json
+# On conserve le fichier de définition du Dashboard Grafana dans git
+!dashboard.json
 **/*.jsonld
 **/*.csv
 
