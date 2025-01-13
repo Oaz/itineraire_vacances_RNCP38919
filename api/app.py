@@ -11,6 +11,10 @@ app = FastAPI(
   version="1.0.0"
 )
 
+@app.get("/")
+def read_root():
+  return {"message": "API Itineraire de Vacances", "code": "200"}
+
 
 @app.get("/db_health")
 def db_service_health():

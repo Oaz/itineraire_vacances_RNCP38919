@@ -289,6 +289,14 @@ services:
       neo4j:
         condition: service_healthy
 
+  blackbox:
+    image: prom/blackbox-exporter:latest
+    privileged: true
+    volumes:
+      - ./monitoring/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml
+    ports:
+      - '9115:9115'
+
 volumes:
   postgres-db-volume:
   neo4j_data:
