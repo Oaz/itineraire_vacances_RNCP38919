@@ -1,3 +1,5 @@
+
+###
 @TheApiAddress = http://127.0.0.1:5000
 
 ### DB health
@@ -6,5 +8,19 @@ GET {{TheApiAddress}}/db_health
 ### Total number of POIs in the DB
 GET {{TheApiAddress}}/count_poi
 
-### Total number of POIs in the DB
+### List of categories with clusters
 GET {{TheApiAddress}}/clustered_categories
+
+### Get route between 2 POIs for given category
+POST {{TheApiAddress}}/route
+Content-Type: application/json
+
+{
+  "start_poi_id": "223013436",
+  "end_poi_id": "235007914",
+  "category": "Museum"
+}
+
+
+
+

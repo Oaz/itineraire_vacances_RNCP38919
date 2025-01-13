@@ -1,5 +1,8 @@
+from typing import List
 from fastapi import FastAPI
+from pydantic import BaseModel
 from utils import connect_to_db_from_env, connect_to_neo4j
+import route_requests as rr
 import psycopg2
 
 app = FastAPI(
@@ -28,8 +31,18 @@ def count_point_of_interest():
   return {"count": record[0], "code": 200}
 
 
-@app.get("/clustered_categories")
+@app.get(
+  "/clustered_categories",
+  summary="List Categories with Associated Clusters",
+  description="This endpoint returns a list of categories with their associated clusters and route counts."
+)
 def list_categories_with_associated_clusters():
+  """
+  Returns a list of categories with their associated clusters and route counts.
+  - **category**: The category name.
+  - **clusterCount**: The number of clusters associated with the category.
+  - **routeCount**: The number of routes associated with the category.
+  """
   with connect_to_neo4j() as driver:
     with driver.session() as session:
       result = session.run('''
@@ -39,8 +52,26 @@ def list_categories_with_associated_clusters():
         WHERE c.category = c2.category AND c.category = category
         RETURN category, clusterCount, COUNT(r) AS routeCount
         ''')
-      categories = [(r['category'], r['clusterCount'], r['routeCount']) for r in result]
-      return [
-        {'category': category, 'clusterCount': clusterCount, 'routeCount': routeCount}
-        for category, clusterCount, routeCount in sorted(categories)
-      ]
+      return [dict(r) for r in result]
+
+
+class RouteRequest(BaseModel):
+  start_poi_id: str
+  end_poi_id: str
+  category: str
+
+
+@app.post(
+  "/route",
+  response_model=List[List[str]],
+  summary="Get Route Between Points of Interest",
+  description="This endpoint calculates and returns a route between two points of interest based on a given category.")
+async def get_route(request: RouteRequest):
+  """
+  Calculates and returns a route between two points of interest (POI) based on a given category.
+  - **start_poi_id**: The ID of the starting POI.
+  - **end_poi_id**: The ID of the destination POI.
+  - **category**: The category of the POIs.
+  - **response**: A list of routes, where each route is a list of POI IDs.
+  """
+  return await rr.get_route(request.start_poi_id, request.end_poi_id, request.category)
