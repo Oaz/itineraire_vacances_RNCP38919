@@ -7,3 +7,17 @@ datasources:
     isDefault: true
     jsonData:
       timeInterval: "15s"
+  - name: PostgreSQL
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    database: datatourisme
+    user: airflow
+    secureJsonData:
+      password: airflow
+    isDefault: false
+    jsonData:
+      postgresVersion: 1000
+      sslmode: "disable"
+      timeInterval: "15s"
+      timescaledb: false
