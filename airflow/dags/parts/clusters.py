@@ -23,15 +23,15 @@ cluster_definitions = [
   ClusterDefinition(
     category='CulturalEvent', min_cluster_size=5, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
   ),
-  ClusterDefinition(
-    category='SportsAndLeisurePlace', min_cluster_size=10, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
-  ),
-  ClusterDefinition(
-    category='EntertainmentAndEvent', min_cluster_size=10, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
-  ),
-  ClusterDefinition(
-    category='WalkingTour', min_cluster_size=5, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
-  ),
+  # ClusterDefinition(
+  #   category='SportsAndLeisurePlace', min_cluster_size=10, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
+  # ),
+  # ClusterDefinition(
+  #   category='EntertainmentAndEvent', min_cluster_size=10, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
+  # ),
+  # ClusterDefinition(
+  #   category='WalkingTour', min_cluster_size=5, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
+  # ),
   ClusterDefinition(
     category='SportsEvent', min_cluster_size=5, expand_threshold=15000, edge_threshold=50000, shortcut_factor=3
   ),
@@ -40,6 +40,21 @@ cluster_definitions = [
   ),
   ClusterDefinition(
     category='ThemePark', min_cluster_size=2, expand_threshold=5000, edge_threshold=150000, shortcut_factor=3
+  ),
+  ClusterDefinition(
+    category='NaturalHeritage', min_cluster_size=2, expand_threshold=5000, edge_threshold=150000, shortcut_factor=3
+  ),
+  ClusterDefinition(
+    category='TechnicalHeritage', min_cluster_size=2, expand_threshold=5000, edge_threshold=150000, shortcut_factor=3
+  ),
+  ClusterDefinition(
+    category='RemembranceSite', min_cluster_size=2, expand_threshold=5000, edge_threshold=150000, shortcut_factor=3
+  ),
+  ClusterDefinition(
+    category='Church', min_cluster_size=2, expand_threshold=5000, edge_threshold=150000, shortcut_factor=3
+  ),
+  ClusterDefinition(
+    category='Castle', min_cluster_size=2, expand_threshold=5000, edge_threshold=150000, shortcut_factor=3
   ),
 ]
 
