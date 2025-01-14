@@ -1082,7 +1082,7 @@
       "id": 9,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "percentChangeColorMode": "standard",
@@ -1136,6 +1136,6 @@
   "timezone": "browser",
   "title": "Contenu BDD Datatourisme",
   "uid": "ce9srunkm3awwb",
-  "version": 3,
+  "version": 5,
   "weekStart": ""
 }
