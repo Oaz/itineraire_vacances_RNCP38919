@@ -112,7 +112,7 @@
           }
         }
       ],
-      "title": "Régions en BDD",
+      "title": "Régions",
       "type": "stat"
     },
     {
@@ -193,7 +193,7 @@
           }
         }
       ],
-      "title": "Départements en BDD",
+      "title": "Départements",
       "type": "stat"
     },
     {
@@ -274,7 +274,7 @@
           }
         }
       ],
-      "title": "Villes en BDD",
+      "title": "Villes",
       "type": "stat"
     },
     {
@@ -355,7 +355,7 @@
           }
         }
       ],
-      "title": "Category POI en BDD",
+      "title": "Categories",
       "type": "stat"
     },
     {
@@ -436,7 +436,7 @@
           }
         }
       ],
-      "title": "POI en BDD",
+      "title": "POI",
       "type": "stat"
     },
     {
@@ -657,7 +657,7 @@
       "id": 7,
       "options": {
         "colorMode": "none",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "percentChangeColorMode": "standard",
@@ -765,7 +765,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "probe_success{job=\"blackbox\"}",
+          "expr": "probe_success{job=\"api\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -1136,6 +1136,6 @@
   "timezone": "browser",
   "title": "Contenu BDD Datatourisme",
   "uid": "ce9srunkm3awwb",
-  "version": 5,
+  "version": 7,
   "weekStart": ""
 }
