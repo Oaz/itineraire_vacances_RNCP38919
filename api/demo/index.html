@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POI Route Demo</title>
+    <title>Itinéraire thématique entre 2 villes</title>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
@@ -39,30 +39,30 @@
     </style>
 </head>
 <body>
-<h1>POI Route Demo</h1>
+<h1>Itinéraire thématique entre 2 villes</h1>
 
 <!-- Input Form -->
 <form id="routeForm">
-    <label for="category">Category:</label>
+    <label for="category">Catégorie :</label>
     <select id="category" name="category" required>
         <option value="">Loading categories...</option>
     </select>
     <br><br>
-    <label for="startCity">Start City:</label>
-    <input type="text" id="startCity" name="startCity" placeholder="Start typing a city..." required>
+    <label for="startCity">Ville de départ :</label>
+    <input type="text" id="startCity" name="startCity" placeholder="" required>
     <br><br>
-    <label for="endCity">End City:</label>
-    <input type="text" id="endCity" name="endCity" placeholder="Start typing a city..." required>
+    <label for="endCity">Ville d'arrivée :</label>
+    <input type="text" id="endCity" name="endCity" placeholder="" required>
     <br><br>
-    <button type="submit">Get Route</button>
+    <button type="submit">Obtenir un itinéraire</button>
 </form>
 
 <!-- Results -->
-<h2>Route Details</h2>
+<h2>Détails de l'itinéraire</h2>
 <pre id="routeResult"></pre>
 
 <!-- Map -->
-<h2>Route Map</h2>
+<h2>Carte</h2>
 <div id="map"></div>
 
 <!-- jQuery -->
@@ -105,12 +105,12 @@
             categories.forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat.category;
-                option.textContent = `${cat.category} (${cat.clusterCount} clusters, ${cat.routeCount} routes)`;
+                option.textContent = `${cat.category}`;
                 categoryDropdown.appendChild(option);
             });
         } catch (error) {
             console.error('Error fetching categories:', error);
-            document.getElementById('category').innerHTML = '<option value="">Failed to load categories</option>';
+            document.getElementById('category').innerHTML = '<option value="">Erreur lors du chargement des catégories</option>';
         }
     }
 
@@ -143,13 +143,13 @@
                     response(suggestions);
                 } catch (error) {
                     console.error('Error fetching cities:', error);
-                    response([{label: 'Error loading cities. Please try again.', value: null}]);
+                    response([{label: 'Erreur lors de la recherche des villes. Essayez à nouveau.', value: null}]);
                 } finally {
                     // Hide loading indicator
                     $(this).removeClass('ui-autocomplete-loading');
                 }
             },
-            minLength: 3, // Start suggesting after 3 characters
+            minLength: 2, // Start suggesting after 2 characters
         });
     }
 
@@ -171,7 +171,7 @@
         const category = document.getElementById('category').value;
 
         // Clear previous results and map markers
-        document.getElementById('routeResult').textContent = 'Loading...';
+        document.getElementById('routeResult').textContent = 'Chargement en cours...';
         map.eachLayer(layer => {
             if (layer instanceof L.Marker) {
                 map.removeLayer(layer);
@@ -203,12 +203,12 @@
             const route = await routeResponse.json();
 
             // Step 3: Get POI details for each POI in the route
-            let result = 'Route:\n';
+            let result = '';
             const poiMarkers = [];
             for (let i = 0; i < route.length; i++) {
                 const area = route[i];
                 const areaColor = areaColors[i % areaColors.length]; // Cycle through colors
-                result += `Area ${i + 1} (${areaColor}):\n`;
+                result += `Étape ${i + 1} (${areaColor}):\n`;
                 for (const poiId of area) {
                     const poiResponse = await fetch(`/poi?id=${poiId}`);
                     const poiData = await poiResponse.json();
@@ -239,7 +239,7 @@
             }
         } catch (error) {
             console.error('Error:', error);
-            document.getElementById('routeResult').textContent = 'An error occurred. Please check the console for details.';
+            document.getElementById('routeResult').textContent = "Une erreur s'est produite.";
         }
     }
 
