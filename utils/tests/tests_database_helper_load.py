@@ -14,7 +14,7 @@ class TestDatabase(unittest.TestCase):
     os.environ["POSTGRES_USER"] = self.postgres_container.username
     os.environ["POSTGRES_PASSWORD"] = self.postgres_container.password
     os.environ["POSTGRES_DB"] = self.postgres_container.dbname
-    os.environ["POSTGRES_PORT"] = self.postgres_container.get_exposed_port(5432)
+    os.environ["POSTGRES_PORT"] = str(self.postgres_container.get_exposed_port(5432))
     os.environ["POSTGRES_HOST"] = self.postgres_container.get_container_host_ip()
     self.engine = dh.connect_to_db_from_env()
 
