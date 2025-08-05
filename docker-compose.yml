@@ -24,32 +24,37 @@
 # Feel free to modify this file to suit your needs.
 ---
 
+
 x-shared-environment: &shared-environment
-  environment:
-    POSTGRES_HOST: postgres
-    POSTGRES_PORT: 5432
-    POSTGRES_USER: airflow
-    POSTGRES_PASSWORD: airflow
-    POSTGRES_DB: datatourisme
-    NEO4J_URL: bolt://neo4j:7687
-    NEO4J_USER: neo4j
-    NEO4J_PASSWORD: my_password
+  POSTGRES_HOST: ${POSTGRES_HOST}
+  POSTGRES_PORT: ${POSTGRES_PORT}
+  POSTGRES_DB: ${POSTGRES_DB}
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  REDIS_HOST: ${REDIS_HOST}
+  REDIS_PORT: ${REDIS_PORT}
+  NEO4J_URL: ${NEO4J_URL}
+  NEO4J_USER: ${NEO4J_USER}
+  NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+  DATA_TOURISME_FEED: ${DATA_TOURISME_FEED}
+  DATA_TOURISME_APPKEY: ${DATA_TOURISME_APPKEY}
+
+x-airflow-common-env: &airflow-common-env
+  AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+  AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+  AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
+  AIRFLOW__CORE__FERNET_KEY: ""
+  AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+  AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+  AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.session"
+  PYTHONPATH: "/opt/airflow/dags:/opt/airflow"
+  _PIP_ADDITIONAL_REQUIREMENTS: "-r /opt/airflow/utils/requirements.txt"
 
 x-airflow-common: &airflow-common
   image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.10.4-python3.10}
-  environment: 
-    &airflow-common-env
-    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
-    AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
-    AIRFLOW__CORE__FERNET_KEY: ""
-    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
-    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-    AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.session"
-    PYTHONPATH: "/opt/airflow/dags:/opt/airflow"
-    _PIP_ADDITIONAL_REQUIREMENTS: "-r /opt/airflow/utils/requirements.txt"
-
+  environment:
+    <<: *airflow-common-env
   volumes:
     - ./airflow/dags:/opt/airflow/dags:ro
     - airflow_logs:/opt/airflow/logs
@@ -159,21 +164,20 @@ services:
     entrypoint: >
       bash -c "
         airflow db migrate &&
-        airflow variables set POSTGRES_HOST 'postgres' &&
-        airflow variables set POSTGRES_PORT '5432' &&
-        airflow variables set POSTGRES_USER 'airflow' &&
-        airflow variables set POSTGRES_PASSWORD 'airflow' &&
-        airflow variables set POSTGRES_DB 'postgres' &&
-        airflow variables set POSTGRES_DATATOURISME_DB 'datatourisme' &&
-        airflow variables set REDIS_HOST 'redis' &&
-        airflow variables set REDIS_PORT '6379' &&
-        airflow variables set URL_ARCHIVE 'https://diffuseur.datatourisme.fr/webservice/af0fdc3a146b7f643ab3fb9c2ba334ad/6e97d53f-f931-49ca-8d17-e1327461eecf' &&
-        airflow variables set NEO4J_USER 'neo4j' &&
-        airflow variables set NEO4J_PASSWORD 'my_password' &&
-        airflow variables set NEO4J_URL 'bolt://neo4j:7687' &&
-        airflow pools set clusters_pool 1 "Clusters Creation Pool"
+        airflow variables set POSTGRES_HOST \"${POSTGRES_HOST:-x}\" &&
+        airflow variables set POSTGRES_PORT \"${POSTGRES_PORT:-x}\" &&
+        airflow variables set POSTGRES_USER \"${POSTGRES_USER:-x}\" &&
+        airflow variables set POSTGRES_PASSWORD \"${POSTGRES_PASSWORD:-x}\" &&
+        airflow variables set POSTGRES_DB \"postgres\" &&
+        airflow variables set POSTGRES_DATATOURISME_DB \"${POSTGRES_DB:-x}\" &&
+        airflow variables set REDIS_HOST \"${REDIS_HOST:-x}\" &&
+        airflow variables set REDIS_PORT \"${REDIS_PORT:-x}\" &&
+        airflow variables set URL_ARCHIVE \"${DATA_TOURISME_FEED:-x}/${DATA_TOURISME_APPKEY:-x}\" &&
+        airflow variables set NEO4J_USER \"${NEO4J_USER:-x}\" &&
+        airflow variables set NEO4J_PASSWORD \"${NEO4J_PASSWORD:-x}\" &&
+        airflow variables set NEO4J_URL \"${NEO4J_URL:-x}\" &&
+        airflow pools set clusters_pool 1 \"Clusters Creation Pool\"
       "
-
     environment:
       <<: *airflow-common-env
       _AIRFLOW_DB_MIGRATE: "true"
@@ -196,7 +200,7 @@ services:
   neo4j:
     image: neo4j:5
     environment:
-      NEO4J_AUTH: neo4j/my_password
+      NEO4J_AUTH: ${NEO4J_USER}/${NEO4J_PASSWORD}
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -228,17 +232,16 @@ services:
     image: pbweb/airflow-prometheus-exporter
     restart: always
     environment:
-        - "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow"
+        - "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/airflow"
         - "AIRFLOW_PROMETHEUS_LISTEN_ADDR=:9112"
         - "AIRFLOW_PROMETHEUS_DATABASE_BACKEND=postgres"
-        - "AIRFLOW_PROMETHEUS_DATABASE_HOST=postgres"
-        - "AIRFLOW_PROMETHEUS_DATABASE_PORT=5432"
-        - "AIRFLOW_PROMETHEUS_DATABASE_USER=airflow"
-        - "AIRFLOW_PROMETHEUS_DATABASE_PASSWORD=airflow"
+        - "AIRFLOW_PROMETHEUS_DATABASE_HOST=${POSTGRES_HOST}"
+        - "AIRFLOW_PROMETHEUS_DATABASE_PORT=${POSTGRES_PORT}"
+        - "AIRFLOW_PROMETHEUS_DATABASE_USER=${POSTGRES_USER}"
+        - "AIRFLOW_PROMETHEUS_DATABASE_PASSWORD=${POSTGRES_PASSWORD}"
         - "AIRFLOW_PROMETHEUS_DATABASE_NAME=airflow"
     ports:
         - "9112:9112"
-
 
   prometheus:
     image: prom/prometheus
@@ -259,8 +262,8 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - grafana-storage:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
-      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - prometheus
     restart: always
@@ -271,7 +274,8 @@ services:
       dockerfile: ./dataviz/Dockerfile
     ports:
       - "8050:8050"
-    <<: *shared-environment
+    environment:
+      <<: *shared-environment
     depends_on:
       neo4j:
         condition: service_healthy
@@ -282,7 +286,8 @@ services:
       dockerfile: ./api/Dockerfile
     ports:
       - "5000:5000"
-    <<: *shared-environment
+    environment:
+      <<: *shared-environment
     depends_on:
       postgres:
         condition: service_healthy
@@ -293,7 +298,7 @@ services:
     image: prom/blackbox-exporter:latest
     privileged: true
     volumes:
-      - ./monitoring/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml
+      - ./monitoring/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
     ports:
       - '9115:9115'
 
