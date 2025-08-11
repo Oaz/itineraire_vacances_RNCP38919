@@ -19,3 +19,5 @@
 
 # Ignorer les fichiers de logs Airflow
 airflow/logs
+
+*.pkl
