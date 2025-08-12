@@ -94,7 +94,7 @@
     // Fetch categories and populate the dropdown
     async function fetchCategories() {
         try {
-            const response = await fetch('/clustered_categories');
+            const response = await fetch('/api/clustered_categories');
             const categories = await response.json();
             const categoryDropdown = document.getElementById('category');
 
@@ -126,7 +126,7 @@
                 // Show loading indicator
                 $(this).addClass('ui-autocomplete-loading');
                 try {
-                    const res = await fetch('/find_cities', {
+                    const res = await fetch('/api/find_cities', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({category, query: request.term})
@@ -180,14 +180,14 @@
 
         try {
             // Step 1: Find POI IDs for start and end cities
-            const startPoiResponse = await fetch('/find_poi', {
+            const startPoiResponse = await fetch('/api/find_poi', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({city: startCity, category})
             });
             const startPoiId = await startPoiResponse.json();
 
-            const endPoiResponse = await fetch('/find_poi', {
+            const endPoiResponse = await fetch('/api/find_poi', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({city: endCity, category})
@@ -195,7 +195,7 @@
             const endPoiId = await endPoiResponse.json();
 
             // Step 2: Get route between the two POIs
-            const routeResponse = await fetch('/route', {
+            const routeResponse = await fetch('/api/route', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({start_poi_id: startPoiId, end_poi_id: endPoiId, category})
@@ -210,7 +210,7 @@
                 const areaColor = areaColors[i % areaColors.length]; // Cycle through colors
                 result += `Étape ${i + 1} (${areaColor}):\n`;
                 for (const poiId of area) {
-                    const poiResponse = await fetch(`/poi?id=${poiId}`);
+                    const poiResponse = await fetch(`/api/poi?id=${poiId}`);
                     const poiData = await poiResponse.json();
                     result += `- ${poiId}: ${poiData.name}, ${poiData.postal_code} ${poiData.city} (${poiData.latitude},${poiData.longitude})\n`;
 

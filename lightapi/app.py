@@ -36,9 +36,6 @@ app = FastAPI(
 def read_root():
   return {"message": "API Itineraire de Vacances", "code": "200"}
 
-demo_dir = Path(__file__).parent / "demo"
-app.mount("/demo", StaticFiles(directory=demo_dir, html=True), name="demo")
-
 @app.get("/db_health")
 def db_service_health():
   try:
