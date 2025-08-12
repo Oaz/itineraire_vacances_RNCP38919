@@ -81,7 +81,6 @@ def create_graphs():
            - Create a CategoryGraph and save it to disk
         """
         import pandas as pd
-
         categories_dir.mkdir(exist_ok=True)
         clusters_path = graphs_dir / "clusters.csv"
         if not clusters_path.exists():
@@ -97,7 +96,6 @@ def create_graphs():
         if not vicinities_path.exists():
             raise FileNotFoundError(f"Vicinities file not found: {vicinities_path}")
         vicinities_df = pd.read_csv(vicinities_path)
-
         categories = clusters_df["category"].unique()
         print(f"Found {len(categories)} categories: {categories}")
         for category in categories:
@@ -105,8 +103,9 @@ def create_graphs():
             cluster_ids = category_clusters["id"].tolist()
             category_routes = routes_df[
                 (routes_df["source_id"].isin(cluster_ids)) &
-                (routes_df["target_id"].isin(cluster_ids))
-                ]
+                (routes_df["target_id"].isin(cluster_ids)) &
+                (routes_df["category"] == category)
+            ]
             category_vicinities = vicinities_df[
                 (vicinities_df["cluster_id"].isin(cluster_ids)) &
                 (vicinities_df["category"] == category)
@@ -121,7 +120,6 @@ def create_graphs():
                 cluster.density = row["density"]
                 cluster.pois = category_vicinities[category_vicinities["cluster_id"] == cluster.id]["poi_id"].tolist()
                 clusters.append(cluster)
-            
             routes = []
             for _, row in category_routes.iterrows():
                 route = Route()
@@ -139,7 +137,6 @@ def create_graphs():
                 for poi_id in [row["poi_id"]]
                 for cluster_id in [row["cluster_id"]]
             }
-
             # Create networkx graph
             nx_graph = nx.Graph()
             for cluster in clusters:
@@ -149,11 +146,9 @@ def create_graphs():
                 nx_graph.add_edge(route.source_id, route.target_id,
                                   distance=route.distance)
             graph.nxg = nx_graph
-    
             category_filename = categories_dir / f"{category}.pkl"
             with open(category_filename, 'wb') as f:
                 pickle.dump(graph, f)
-            
             print(f"Created graph for category {category} with {len(clusters)} clusters and {len(routes)} routes")
 
 def load_categories() -> dict[str, Category]:
