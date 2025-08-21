@@ -21,3 +21,9 @@
 airflow/logs
 
 *.pkl
+
+*.html
+!demo/index.html
+dossier_de_projet/*.js
+dossier_de_projet/book
+

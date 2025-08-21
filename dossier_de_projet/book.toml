@@ -1,0 +1,17 @@
+[book]
+authors = ["Olivier Azeau"]
+language = "fr"
+src = "src"
+title = "Dossier de projet RNCP 38919"
+
+[preprocessor]
+
+[preprocessor.mermaid]
+command = "mdbook-mermaid"
+
+[output]
+
+[output.html]
+additional-js = ["mermaid.min.js", "mermaid-init.js"]
+
+[output.pdf]
