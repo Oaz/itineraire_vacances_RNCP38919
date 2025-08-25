@@ -24,6 +24,7 @@ airflow/logs
 
 *.html
 !demo/index.html
-dossier_de_projet/*.js
+dossier_projet/*.pdf
 dossier_de_projet/book
 
+node_modules

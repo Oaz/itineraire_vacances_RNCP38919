@@ -1,0 +1,22 @@
+flowchart LR
+    A(Création de
+    la base de données
+    postgresql) --> B(Récupération
+    des données
+    dans postgresql)
+    C(Téléchargement
+    des données
+    DATAtourisme) --> D(Extraction
+    des données)
+    B --> E(Nettoyage
+    des données)
+    D --> E
+    E --> F(Create/Update
+    dans postgresql)
+    E --> G(Create/Update
+    dans neo4j)
+    F --> H(Nettoyage des
+    fichiers/caches)
+    G --> H
+    H --> I(Clustering
+    dans neo4j)

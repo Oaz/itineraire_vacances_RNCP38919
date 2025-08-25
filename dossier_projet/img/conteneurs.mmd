@@ -1,0 +1,49 @@
+flowchart TB
+    subgraph "Infrastructure de données"
+        pg[PostgreSQL] --- pgex[Postgres Exporter]
+        neo[Neo4j]
+        redis[Redis] --- redex[Redis Exporter]
+    end
+
+    subgraph "Airflow ETL"
+        web[Airflow Webserver]
+        sched[Airflow Scheduler]
+        worker[Airflow Worker]
+        flower[Airflow Flower]
+        init[Airflow Init]
+        airex[Airflow Exporter]
+
+        sched --> worker
+        web --> flower
+        init -.initialise.-> web
+        init -.initialise.-> sched
+        airex -.monitore.-> web
+        airex -.monitore.-> sched
+        airex -.monitore.-> worker
+    end
+
+    subgraph "Applications"
+        api[API FastAPI]
+        viz[DataViz Dash]
+    end
+
+    subgraph "Monitoring"
+        prom[Prometheus]
+        graf[Grafana]
+        bbox[Blackbox Exporter]
+
+        pgex --> prom
+        redex --> prom
+        airex --> prom
+        bbox --> prom
+        prom --> graf
+    end
+
+    pg --> api
+    neo --> api
+    pg --> worker
+    neo --> worker
+    redis --> worker
+    redis --> sched
+    neo --> viz
+    api --> bbox
