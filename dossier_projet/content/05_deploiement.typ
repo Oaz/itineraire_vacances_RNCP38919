@@ -66,7 +66,7 @@ Le pipeline termine avec une phase de clustering qui regroupe les points d'inté
 avec des paramètres de distance et de densité spécifiques à chaque type, facilitant ainsi la découverte de circuits thématiques.
 Les partitionnements des catégories sont effectués en parallèle.
 
-#figure(image("../img/airflow.png"), caption:"Pipeline ETL")
+#figure(image("../img/gen/airflow.png"), caption:"Pipeline ETL")
 
 == API
 
@@ -166,6 +166,6 @@ L'application est entièrement conteneurisée via Docker, ce qui facilite son d�
 L'ensemble des services est configuré avec des healthchecks appropriés pour assurer la résilience du système, et les volumes Docker garantissent la persistance des données entre les redémarrages. L'architecture modulaire permet également d'ajouter ou de remplacer des composants facilement.
 
 #figure(
-  image("../img/conteneurs.png"),
+  image("../img/gen/conteneurs.png"),
   caption: "Architecture des conteneurs Docker"
 )

@@ -28,3 +28,4 @@ dossier_projet/*.pdf
 dossier_de_projet/book
 
 node_modules
+gen

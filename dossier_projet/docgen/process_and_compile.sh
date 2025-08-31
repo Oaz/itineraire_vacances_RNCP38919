@@ -18,8 +18,9 @@ find . -name "*.mmd" | while read -r file; do
     base_name=$(basename "$file" .mmd)
     dir_name=$(dirname "$file")
     temp_svg="$HOME/temp_mermaid/${base_name}_temp.svg"
-    output_file="${file%.mmd}.png"
-    
+    output_file="${dir_name}/gen/${base_name}.png"
+    mkdir -p "${dir_name}/gen"
+
     echo "Analyzing dimensions for $file"
     
     # First pass: Generate an SVG to analyze dimensions
