@@ -1,0 +1,72 @@
+flowchart LR
+    dbp[(PostgreSQL)]
+    dbn[(Neo4j)]
+    dbr[(Redis)]
+    C(Téléchargement
+    du batch courant
+    DATAtourisme) ==> D(Mise en cache
+    des données du
+    batch courant)
+    D -.- dbr
+    A0(Test présence de
+    la base de données
+    relationnelle) ==> B(Mise en cache
+    des données existantes
+    dans relationnelle)
+    dbp -.- A0
+    A1(Création de
+    la base de données
+    PostgreSQL) ==> B(Mise en cache
+    des POIs existants)
+    A1 -.- dbp
+    B -.- dbp
+    B -.- dbr
+    A0 ==> A1
+    E(Détermination
+    des POIs à créer
+    et à modifier)
+    E -.- dbr
+    D ==> E
+    B ==> E
+    E ==> G(Import POIs
+    dans Neo4j)
+    G -.- dbn
+    E ==> F0(Créations dans
+    PostgreSQL)
+    F0 -.- dbp
+    E ==> F1(Mises à jour
+    dans PostgreSQL)
+    F1 -.- dbp
+    H(Nettoyage des
+    fichiers/caches)
+    G ==> H
+    G -.- dbr
+    H -.- dbr
+    F0 ==> H
+    F0 -.- dbr
+    F1 ==> H
+    F1 -.- dbr
+    H ==> Clustering
+    subgraph Clustering
+      direction LR
+      CA(Clustering
+      Categorie A)
+      CB(Clustering
+      Categorie B)
+      CC(Clustering
+      Categorie C)
+    end
+    Clustering -.- dbn
+    classDef cdp fill:#c8f, color:#000, stroke:#000
+    dbp:::cdp
+    A0:::cdp
+    A1:::cdp
+    B:::cdp
+    F0:::cdp
+    F1:::cdp
+    classDef cdn fill:#df5, color:#000, stroke:#000
+    dbn:::cdn
+    G:::cdn
+    CA:::cdn
+    CB:::cdn
+    CC:::cdn

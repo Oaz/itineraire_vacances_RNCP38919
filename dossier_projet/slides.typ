@@ -63,7 +63,8 @@
 == DATAtourisme
 
 #columns-content(colwidths: (1fr, 2fr))[
-  - Base de données "opendata"
+  - Base de données "opendata" de POIs
+  - Alimentée par divers acteurs locaux liés au tourisme
   - Possibilités de ciblage du flux
     - Zone géographique
     - Types de POI
@@ -85,7 +86,7 @@
 == Google Places
 
 #columns-content(colwidths: (1fr, 2fr))[
-  - Web API payante (\$32 pour 1000 appels)
+  - Web API payante (\~\$32 pour 1000 appels)
   - Utilisé dans Google Maps
   - Nombreuses données (avis, horaires, photos...)
 ][
@@ -178,7 +179,7 @@
 
 == ETL Pipeline
 
-#image("./img/gen/airflow.png")
+#image("./img/gen/airflow_details.png")
 
 == Web API
 
